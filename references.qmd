@@ -1,0 +1,29 @@
+# References {.unnumbered}
+
+## Books
+
+Silge, J., & Robinson, D. (2017). *Text mining with R: A tidy approach*. O'Reilly. Free online at <https://www.tidytextmining.com>.
+
+Hvitfeldt, E., & Silge, J. (2021). *Supervised machine learning for text analysis in R*. CRC Press. Free online at <https://smltar.com>.
+
+Grimmer, J., Roberts, M. E., & Stewart, B. M. (2022). *Text as data: A new framework for machine learning and the social sciences*. Princeton University Press.
+
+## Methods
+
+Blei, D. M., Ng, A. Y., & Jordan, M. I. (2003). Latent Dirichlet allocation. *Journal of Machine Learning Research, 3*, 993–1022.
+
+Roberts, M. E., Stewart, B. M., & Tingley, D. (2019). stm: An R package for structural topic models. *Journal of Statistical Software, 91*(2), 1–40.
+
+Friedman, J., Hastie, T., & Tibshirani, R. (2010). Regularization paths for generalized linear models via coordinate descent. *Journal of Statistical Software, 33*(1), 1–22.
+
+Hu, M., & Liu, B. (2004). Mining and summarizing customer reviews. *Proceedings of KDD-04*, 168–177.
+
+Sparck Jones, K. (1972). A statistical interpretation of term specificity and its application in retrieval. *Journal of Documentation, 28*(1), 11–21.
+
+## R packages
+
+Silge, J., & Robinson, D. (2016). tidytext: Text mining and analysis using tidy data principles in R. *Journal of Open Source Software, 1*(3), 37.
+
+Grün, B., & Hornik, K. (2011). topicmodels: An R package for fitting topic models. *Journal of Statistical Software, 40*(13), 1–30.
+
+Wickham, H., et al. (2019). Welcome to the tidyverse. *Journal of Open Source Software, 4*(43), 1686.

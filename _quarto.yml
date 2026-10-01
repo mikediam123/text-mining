@@ -1,0 +1,63 @@
+project:
+  type: book
+  output-dir: docs        # GitHub Pages serves from this folder
+  post-render:
+    - _postrender.R       # creates docs/.nojekyll, checks for stray CDN scripts
+
+book:
+  title: "Text Mining in R"
+  subtitle: "A lab guide, using the VCU CARES interviews"
+  author: "Michael Broda, Ph.D."
+  date: today
+  description: >
+    A hands-on introduction to text mining for lab members, built around
+    open-ended interviews with VCU students. Moves from descriptive methods
+    (word counts, TF-IDF) to topic models, sentiment analysis, and supervised
+    learning.
+  repo-url: https://github.com/mikediam123/text-mining
+  repo-actions: [issue]
+  search: true
+  page-footer:
+    left: "Text Mining in R"
+    right: "Built with [Quarto](https://quarto.org)"
+  chapters:
+    - index.qmd
+    - part: "Getting Started"
+      chapters:
+        - 01-the-data.qmd
+        - 02-tokens.qmd
+    - part: "Descriptive Methods"
+      chapters:
+        - 03-tf-idf.qmd
+    - part: "Finding Structure"
+      chapters:
+        - 04-topic-lda.qmd
+        - 05-topic-stm.qmd
+        - 06-sentiment.qmd
+    - part: "Supervised Learning"
+      chapters:
+        - 07-supervised.qmd
+    - 08-wrapping-up.qmd
+    - references.qmd
+
+format:
+  html:
+    theme:
+      - cosmo
+      - styles.scss
+    # KaTeX instead of MathJax, to avoid the polyfill.io CDN reference
+    # that Pandoc's MathJax template injects (see _postrender.R).
+    html-math-method: katex
+    code-link: true
+    code-copy: true
+    code-tools: true
+    code-overflow: wrap
+    toc: true
+    toc-depth: 3
+    fig-width: 7
+    fig-height: 5
+
+execute:
+  freeze: auto      # cache results so chapters only re-run when they change
+  warning: true
+  message: false

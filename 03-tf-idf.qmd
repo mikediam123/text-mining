@@ -1,0 +1,182 @@
+# Term Frequency and TF-IDF {#sec-tfidf}
+
+**Data for this chapter:** `data/vcu_cares_long.csv`
+
+Raw counts favor words that are common everywhere. What we usually want is the opposite: the words that are distinctive of one group of answers compared with the others. **TF-IDF** is the standard way to find them.
+
+```{r}
+#| label: setup
+
+source("R/helpers.R")
+library(tidytext)
+
+vcu <- load_vcu()
+
+stops <- stop_words |> filter(lexicon == "snowball")
+custom_stops <- tibble(word = c("vcu", "student", "students", "like",
+                                "get", "just", "really", "also", "can"))
+
+tokens <- vcu |>
+  unnest_tokens(word, text) |>
+  anti_join(stops, by = "word") |>
+  anti_join(custom_stops, by = "word") |>
+  filter(!str_detect(word, "^\\d+$"))
+```
+
+## The idea
+
+Two quantities, multiplied together.
+
+**Term frequency (tf)** is how common a word is within a document:
+
+$$
+\text{tf}(t, d) = \frac{n_{t,d}}{\sum_k n_{k,d}}
+$$
+
+the count of word $t$ in document $d$, divided by the total words in $d$.
+
+**Inverse document frequency (idf)** down-weights words that appear in many documents:
+
+$$
+\text{idf}(t) = \ln\left(\frac{N}{n_t}\right)
+$$
+
+where $N$ is the number of documents and $n_t$ is the number of documents containing $t$. A word in every document has $\ln(1) = 0$, so it contributes nothing. A word in only one document gets the largest idf.
+
+$$
+\text{tf-idf}(t, d) = \text{tf}(t, d) \times \text{idf}(t)
+$$
+
+High tf-idf means: this word is frequent *here* and rare *elsewhere*. That is exactly "distinctive."
+
+## A tiny example by hand
+
+Three miniature documents make the arithmetic visible.
+
+```{r}
+#| label: toy
+
+toy <- tribble(
+  ~doc, ~word,
+  "A", "housing", "A", "housing", "A", "events",
+  "B", "events",  "B", "events",  "B", "parking",
+  "C", "events",  "C", "advising"
+)
+
+toy |>
+  count(doc, word) |>
+  bind_tf_idf(word, doc, n)
+```
+
+"Events" appears in all three documents, so its idf is $\ln(3/3) = 0$ and its tf-idf is 0 no matter how often it appears. "Housing" appears only in document A, so it gets $\ln(3/1) \approx 1.10$. Work one row out by hand to convince yourself.
+
+## What is a document, here?
+
+TF-IDF compares documents, so the documents you define decide the answer. We will try two.
+
+## Documents = the three questions
+
+If each *question* is one big document, TF-IDF tells us which words are characteristic of strengths versus concerns versus ideas.
+
+```{r}
+#| label: fig-tfidf-question
+#| fig-cap: "Words most distinctive of each question."
+#| fig-height: 6
+
+tfidf_q <- tokens |>
+  count(question, word) |>
+  bind_tf_idf(word, question, n)
+
+tfidf_q |>
+  group_by(question) |>
+  slice_max(tf_idf, n = 10, with_ties = FALSE) |>
+  ungroup() |>
+  ggplot(aes(tf_idf, reorder_within(word, tf_idf, question))) +
+  geom_col() +
+  scale_y_reordered() +
+  facet_wrap(~question, scales = "free") +
+  labs(x = "tf-idf", y = NULL)
+```
+
+With only three documents, a word that appears in all three gets idf of zero and vanishes. A word that appears in just one question scores high. The results are real but coarse: with $N = 3$, idf can only take a few values. That is a reason to be careful about tiny document counts.
+
+## Documents = student level
+
+A more useful comparison is by who is speaking. Do graduate students talk about different things than undergraduates?
+
+```{r}
+#| label: fig-tfidf-level
+#| fig-cap: "Words most distinctive of each student level."
+#| fig-height: 6
+
+tfidf_level <- tokens |>
+  filter(!is.na(level)) |>
+  count(level, word) |>
+  bind_tf_idf(word, level, n)
+
+tfidf_level |>
+  group_by(level) |>
+  filter(n >= 5) |>
+  slice_max(tf_idf, n = 10, with_ties = FALSE) |>
+  ungroup() |>
+  ggplot(aes(tf_idf, reorder_within(word, tf_idf, level))) +
+  geom_col() +
+  scale_y_reordered() +
+  facet_wrap(~level, scales = "free") +
+  labs(x = "tf-idf", y = NULL)
+```
+
+We added `filter(n >= 5)`. Without it, TF-IDF's top words are dominated by words used once, by one student, in one level. That is a known weakness: **rare words get high idf**, even when rarity just means "a typo" or "a name." A minimum count is the standard guard.
+
+::: callout-warning
+## Group sizes are very different
+
+There are roughly 1,000 undergraduates and fewer than 20 professional students. TF-IDF is a ratio, so it does not know that the professional group is tiny. Words that rank high for a group of 17 people may reflect two or three students. Treat small-group results as leads to follow up by reading, not as findings.
+:::
+
+## Reading the words in context
+
+A word on a chart is stripped of its sentence. Before you believe a distinctive word, look at it in use:
+
+```{r}
+#| label: in-context
+
+top_grad <- tfidf_level |>
+  filter(level == "Graduate", n >= 5) |>
+  slice_max(tf_idf, n = 3, with_ties = FALSE) |>
+  pull(word)
+top_grad
+
+vcu |>
+  filter(level == "Graduate",
+         str_detect(str_to_lower(text), top_grad[1])) |>
+  slice_head(n = 5) |>
+  select(question, text)
+```
+
+This is the check we will do after every method in this book. A number tells you where to look; the text tells you what it means.
+
+## TF-IDF as a feature matrix
+
+TF-IDF has a second life. If every answer is a document, then every answer becomes a row of numbers, one per word. That matrix is the input to topic models and to the supervised models in @sec-supervised. Here is the long form `tidytext` produces:
+
+```{r}
+#| label: doc-tfidf
+
+doc_tfidf <- tokens |>
+  count(doc_id, word) |>
+  bind_tf_idf(word, doc_id, n)
+
+doc_tfidf |> arrange(desc(tf_idf)) |> head(10)
+```
+
+Notice the top rows. A one-word answer has a term frequency of 1, and a word that appears in a single answer gets the maximum idf, so one-word answers made of rare words dominate. Several of these are typos or keyboard mashing ("asdfasdf"), not findings.
+
+That is a property of the weighting, not a discovery. It is also a handy quality check: sorting by tf-idf is a fast way to find junk answers that your cleaning rules missed.
+
+## Summary
+
+- TF-IDF finds words that distinguish one set of documents from others.
+- The documents are your choice, and the answer depends on it.
+- Rare words score high; guard against it with a minimum count.
+- Small groups give unstable results. Read the underlying text.

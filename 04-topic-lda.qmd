@@ -1,0 +1,287 @@
+# Topic Models I: LDA {#sec-lda}
+
+**Data for this chapter:** `data/vcu_cares_long.csv`
+
+TF-IDF told us which words are distinctive of a group we had already defined. A **topic model** goes the other way. It proposes the groups. Given only the words in each document, it finds sets of words that tend to appear together and calls each set a topic.
+
+The most widely used topic model is **Latent Dirichlet Allocation (LDA)** (Blei, Ng, & Jordan, 2003).
+
+```{r}
+#| label: setup
+
+source("R/helpers.R")
+library(tidytext)
+library(topicmodels)
+
+vcu <- load_vcu()
+```
+
+## The idea in plain terms
+
+LDA imagines that every document was written like this:
+
+1. Each document has its own mix of topics, such as 60% topic A and 40% topic B.
+2. Each topic is a probability distribution over words. Topic A might make "housing," "rent," and "dorm" likely.
+3. To write each word, pick a topic from the document's mix, then pick a word from that topic.
+
+We observe only the words. LDA works backward to find the topic-word distributions (**beta**) and the document-topic mixes (**gamma**) that would most plausibly produce what we see.
+
+Three things to keep in mind from the start:
+
+- A **topic is a list of words, not a label.** The model does not know that topic 3 is "housing." You read the top words and name it yourself.
+- **You choose the number of topics, K.** The data do not tell you the right K.
+- **Documents mix topics.** An answer can be partly about advising and partly about money.
+
+## Choosing the documents
+
+LDA learns from words that co-occur *within* a document. Our answers have a median of about a dozen words, and after stop-word removal, six or seven. That is too little for co-occurrence to show up.
+
+The fix is to make the document bigger. We combine each student's answers (strength, concern, and ideas) into one document. Each student's document then has a few dozen words, enough to reveal which words travel together.
+
+```{r}
+#| label: docs
+
+stops <- stop_words |> filter(lexicon == "snowball")
+custom_stops <- tibble(word = c("vcu", "student", "students", "like",
+                                "get", "just", "really", "also", "can",
+                                "e", "g", "lot"))
+
+tokens <- vcu |>
+  unnest_tokens(word, text) |>
+  anti_join(stops, by = "word") |>
+  anti_join(custom_stops, by = "word") |>
+  filter(!str_detect(word, "^\\d+$"))
+
+# Keep words used in at least 5 different students' answers
+vocab <- tokens |>
+  distinct(resp_id, word) |>
+  count(word) |>
+  filter(n >= 5) |>
+  pull(word)
+
+student_counts <- tokens |>
+  filter(word %in% vocab) |>
+  count(resp_id, word)
+
+# Drop students left with too few words to say anything
+keep <- student_counts |>
+  group_by(resp_id) |>
+  filter(sum(n) >= 5) |>
+  ungroup()
+
+n_distinct(keep$resp_id); n_distinct(keep$word)
+```
+
+Pruning rare words is standard. A word used in only one or two documents cannot help define a topic, and it slows the model down.
+
+## Build the document-term matrix
+
+LDA wants a **document-term matrix**: one row per document, one column per word, cells holding counts.
+
+```{r}
+#| label: dtm
+
+dtm <- keep |> cast_dtm(document = resp_id, term = word, value = n)
+dtm
+```
+
+## Fit the model
+
+```{r}
+#| label: fit
+
+K <- 6
+lda <- LDA(dtm, k = K, control = list(seed = 664))
+```
+
+`seed` matters. LDA starts from a random guess and can land in different places on different runs. Fix the seed so that your results can be reproduced.
+
+## The topics: beta
+
+`tidy(..., matrix = "beta")` returns the probability of each word under each topic. The highest-probability words define the topic.
+
+```{r}
+#| label: fig-beta
+#| fig-cap: "Top ten words in each topic."
+#| fig-height: 7
+
+beta <- tidy(lda, matrix = "beta")
+
+top_terms <- beta |>
+  group_by(topic) |>
+  slice_max(beta, n = 10, with_ties = FALSE) |>
+  ungroup()
+
+ggplot(top_terms, aes(beta, reorder_within(term, beta, topic))) +
+  geom_col() +
+  scale_y_reordered() +
+  facet_wrap(~ topic, scales = "free_y", ncol = 3) +
+  labs(x = "Probability of word within topic", y = NULL)
+```
+
+**This is the step that requires you.** Read each panel and try to name it. Some will be crisp ("housing, rent, campus, apartments, expensive"). Others will be a grab-bag. A grab-bag topic is not a failure of reading; it is information that K or the preprocessing needs work.
+
+### Words that are common everywhere crowd the lists
+
+A word like "events" or "resources" can be high in several topics simply because it is frequent overall. A useful alternative is to rank words by how much *more* likely they are in one topic than average, which pulls out more distinctive words:
+
+```{r}
+#| label: distinctive
+
+distinct_terms <- beta |>
+  group_by(term) |>
+  mutate(avg_log_beta = mean(log(beta))) |>
+  ungroup() |>
+  mutate(lift = log(beta) - avg_log_beta) |>
+  group_by(topic) |>
+  slice_max(lift, n = 8, with_ties = FALSE) |>
+  summarise(words = paste(term, collapse = ", "))
+
+distinct_terms
+```
+
+Compare these lists with the plot. Distinctive words usually make a topic easier to name; frequent words usually make it easier to defend. Look at both.
+
+## The documents: gamma
+
+`matrix = "gamma"` gives each document's mix of topics.
+
+```{r}
+#| label: gamma
+
+gamma <- tidy(lda, matrix = "gamma") |>
+  mutate(resp_id = as.integer(document))
+
+gamma |> filter(resp_id == first(resp_id))
+```
+
+Each document's gammas sum to 1. How much does a typical student's document belong to a single topic?
+
+```{r}
+#| label: fig-dominant
+#| fig-cap: "The share of each student's document taken by its strongest topic."
+
+dominant <- gamma |>
+  group_by(resp_id) |>
+  slice_max(gamma, n = 1, with_ties = FALSE) |>
+  ungroup()
+
+ggplot(dominant, aes(gamma)) +
+  geom_histogram(binwidth = 0.05, boundary = 0) +
+  labs(x = "Gamma of the strongest topic", y = "Students")
+```
+
+If the bulk of the mass sits far below 1, documents are genuinely mixed. If it piles up near 1, documents are cleanly single-topic. With short documents you will usually see more mixing than you expect, and the dominant topic can be a weak claim.
+
+## Prevalence: how big is each topic?
+
+```{r}
+#| label: fig-prevalence
+#| fig-cap: "Average share of each topic across students."
+
+gamma |>
+  group_by(topic) |>
+  summarise(prevalence = mean(gamma)) |>
+  ggplot(aes(prevalence, reorder(factor(topic), prevalence))) +
+  geom_col() +
+  labs(x = "Mean gamma", y = "Topic")
+```
+
+## Always read the documents
+
+The word lists are a summary of a summary. For each topic, read the documents where it is strongest.
+
+```{r}
+#| label: read-docs
+
+student_text <- vcu |>
+  group_by(resp_id) |>
+  summarise(text = paste(text, collapse = " | "), .groups = "drop")
+
+gamma |>
+  filter(topic == 1) |>
+  slice_max(gamma, n = 3, with_ties = FALSE) |>
+  left_join(student_text, by = "resp_id") |>
+  select(gamma, text)
+```
+
+Change `topic == 1` to each topic in turn. If the top documents for a topic do not look related, the topic is not a theme, no matter how coherent its word list looks.
+
+## A check against the interviewers' codes
+
+We have an independent signal: the topics the interviewers ticked. If LDA is finding real themes, a topic's strongest documents should tend to carry related interviewer codes.
+
+```{r}
+#| label: fig-validate
+#| fig-cap: "For each LDA topic, the interviewer codes most over-represented among its students."
+#| fig-height: 7
+
+codes <- vcu |>
+  filter(!is.na(topics)) |>
+  separate_rows(topics, sep = ";\\s*") |>
+  distinct(resp_id, topics)
+
+base_rate <- codes |>
+  count(topics) |>
+  mutate(base = n / n_distinct(codes$resp_id)) |>
+  select(topics, base)
+
+# Only students from the original form have interviewer codes, so compare
+# like with like: the size of each topic is counted among coded students only
+topic_sizes <- dominant |>
+  filter(resp_id %in% codes$resp_id) |>
+  count(topic, name = "n_students")
+
+dominant |>
+  inner_join(codes, by = "resp_id") |>
+  count(topic, topics) |>
+  left_join(topic_sizes, by = "topic") |>
+  left_join(base_rate, by = "topics") |>
+  mutate(share = n / n_students, lift = share / base) |>
+  filter(n >= 5) |>
+  group_by(topic) |>
+  slice_max(lift, n = 3, with_ties = FALSE) |>
+  ungroup() |>
+  ggplot(aes(lift, reorder_within(topics, lift, topic))) +
+  geom_col() +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  scale_y_reordered() +
+  facet_wrap(~ topic, scales = "free_y", ncol = 2) +
+  labs(x = "Lift over the overall rate (1 = no association)", y = NULL)
+```
+
+Lift above 1 means the code is more common among that topic's students than in the data overall. A topic with no codes above 1, or with odd ones, is a candidate for being an artifact.
+
+## How many topics?
+
+There is no right answer, only a trade-off. Fewer topics are broad and easy to read but blur distinct ideas together. More topics are specific but start to split a single theme into near-duplicates.
+
+Fit several values of K and compare them by reading, not just by statistics.
+
+```{r}
+#| label: multiple-k
+
+fits <- map(c(4, 6, 8, 10), \(k) LDA(dtm, k = k, control = list(seed = 664)))
+
+map_dfr(fits, \(m) tibble(k = m@k, loglik = as.numeric(logLik(m))))
+```
+
+Log-likelihood improves every time you add topics, so it cannot choose K for you. Formal helpers exist: held-out **perplexity** (`topicmodels::perplexity()` on documents the model did not train on) and coherence measures (the `ldatuning` package). They narrow the range, but the last step is always a judgment: does this set of topics tell a story I can defend, and that I can verify by reading?
+
+::: callout-tip
+## A practical routine
+
+1. Fit K = 4, 6, 8, 10.
+2. For each, print the top words and name every topic.
+3. Prefer the smallest K where every topic gets a name you would stand behind and no two topics are near-duplicates.
+4. Read top documents for each topic.
+:::
+
+## Cautions
+
+- **LDA is stochastic.** Change the seed and the topics reshuffle. Stable themes appear across seeds. Unstable ones are probably noise.
+- **Topics are not categories.** A document's strongest topic is a summary, not a classification.
+- **Short text is hard.** We combined answers per student to get enough words. Even so, expect messier topics here than with long documents.
+- **Preprocessing choices matter.** Different stop-word lists and vocabulary cutoffs will change the topics. Document yours.
+
+In the next chapter, we use a model that lets topic prevalence vary with student characteristics, so that "which topics do graduate students bring up more?" becomes a question the model can answer directly.

@@ -1,0 +1,183 @@
+# Tokens {#sec-tokens}
+
+**Data for this chapter:** `data/vcu_cares_long.csv`
+
+Computers cannot read a sentence the way you do. Nearly every text-mining method starts by breaking text into pieces and counting them. This chapter covers that first step and the simplest description it allows: which words come up most.
+
+```{r}
+#| label: setup
+
+source("R/helpers.R")
+library(tidytext)
+
+vcu <- load_vcu()
+```
+
+## The tidy text idea
+
+The `tidytext` package follows one rule: **one token per row**. A token is whatever unit you decide to count, most often a single word. `unnest_tokens()` takes a column of text and returns a table with one row per token, keeping every other column attached.
+
+```{r}
+#| label: tokens
+
+tokens <- vcu |>
+  unnest_tokens(word, text)
+
+tokens |> select(doc_id, question, word) |> head(10)
+nrow(vcu); nrow(tokens)
+```
+
+The 3,447 answers became about 56,000 rows. Notice that `unnest_tokens()` also lowercased everything and stripped punctuation. Those are defaults, and they are cleaning decisions made for you: "VCU" and "vcu" now count as the same word, which is usually what we want.
+
+## Counting words
+
+```{r}
+#| label: fig-raw-top
+#| fig-cap: "The most frequent words, before removing stop words."
+
+tokens |>
+  count(word, sort = TRUE) |>
+  slice_head(n = 15) |>
+  ggplot(aes(n, reorder(word, n))) +
+  geom_col() +
+  labs(x = "Count", y = NULL)
+```
+
+This is the classic first result in text mining, and it is nearly useless. The most frequent words are "the," "to," "and," "of": words that appear in all English and say nothing about VCU.
+
+## Stop words
+
+**Stop words** are common function words that we remove before counting. `tidytext` includes several lists in `stop_words`.
+
+```{r}
+#| label: stops
+
+count(stop_words, lexicon)
+```
+
+We will use the `snowball` list, which is short and conservative. The longer `SMART` list removes more but also removes words like "new," "first," "need," and "help" that can be meaningful here.
+
+```{r}
+#| label: tokens-clean
+
+stops <- stop_words |> filter(lexicon == "snowball")
+
+tokens <- vcu |>
+  unnest_tokens(word, text) |>
+  anti_join(stops, by = "word")
+
+nrow(tokens)
+```
+
+About 40% of the tokens disappeared. Now the counts, overall and by question:
+
+```{r}
+#| label: fig-top-by-question
+#| fig-cap: "Top words in each question, with standard stop words removed."
+#| fig-height: 6
+
+top_by_q <- tokens |>
+  count(question, word, sort = TRUE) |>
+  group_by(question) |>
+  slice_max(n, n = 10, with_ties = FALSE) |>
+  ungroup()
+
+ggplot(top_by_q, aes(n, reorder_within(word, n, question))) +
+  geom_col() +
+  scale_y_reordered() +
+  facet_wrap(~question, scales = "free") +
+  labs(x = "Count", y = NULL)
+```
+
+`reorder_within()` and `scale_y_reordered()` are the `tidytext` way to sort bars separately inside each facet. Without them, every panel is sorted by the overall order and the plot is hard to read.
+
+## Domain stop words
+
+Look at the plot. Words like "vcu," "students," and "student" appear near the top of everything, because every answer is about students at VCU. They are not stop words in English, but in *this* dataset they carry no information. Add them yourself:
+
+```{r}
+#| label: custom-stops
+
+custom_stops <- tibble(word = c("vcu", "student", "students", "like",
+                                "get", "just", "really", "also", "can"))
+
+tokens <- tokens |>
+  anti_join(custom_stops, by = "word") |>
+  filter(!str_detect(word, "^\\d+$"))   # list numbers ("1.", "2.") from the ideas question
+```
+
+The last line removes bare numbers. Many students answered the "top three things" question as a numbered list, so "1," "2," and "3" would otherwise rank among the most common words in the whole dataset.
+
+::: callout-tip
+## Build the list by looking, not guessing
+
+Print the top 50 words, read down the list, and ask of each: would I want this word to count as evidence of anything? Add the ones where the answer is no. Then re-check. You will do this loop two or three times on any new dataset, and the final list should be written down so it can be defended.
+:::
+
+```{r}
+#| label: fig-top-clean
+#| fig-cap: "Most frequent content words overall."
+
+tokens |>
+  count(word, sort = TRUE) |>
+  slice_head(n = 20) |>
+  ggplot(aes(n, reorder(word, n))) +
+  geom_col() +
+  labs(x = "Count", y = NULL)
+```
+
+Now we have a picture of what students talk about: campus, events, housing, resources, and support lead the list, with career, food, and parking close behind. This is a legitimate first result. Its limit is that a raw count rewards words that are long-winded or frequent in the biggest group. We will fix that in @sec-tfidf.
+
+## Beyond single words: bigrams
+
+A single word often loses its meaning. "Financial" and "aid" are separate tokens, but "financial aid" is one idea. Asking `unnest_tokens()` for `token = "ngrams"` with `n = 2` counts adjacent word pairs, called **bigrams**.
+
+```{r}
+#| label: bigrams
+
+bigrams <- vcu |>
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) |>
+  filter(!is.na(bigram)) |>
+  separate(bigram, c("w1", "w2"), sep = " ", remove = FALSE) |>
+  filter(!w1 %in% stops$word, !w2 %in% stops$word,
+         !w1 %in% custom_stops$word, !w2 %in% custom_stops$word)
+
+bigrams |> count(bigram, sort = TRUE) |> head(20)
+```
+
+We split each bigram into two words so that we can filter stop words from *either* position. Pairs like "financial aid," "mental health," and "career fairs" surface here that were invisible in the single-word counts.
+
+Read the list for artifacts too. The pair "e g" is the abbreviation "e.g." with its periods stripped. It is not a theme, and it is a reminder that tokenizing is a blunt instrument. Add "e" and "g" to the stop words if it bothers you.
+
+### A network of word pairs
+
+```{r}
+#| label: fig-network
+#| fig-cap: "Word pairs that occur at least eight times. Arrows run from the first word to the second."
+#| fig-height: 6
+
+library(igraph)
+library(ggraph)
+
+edges <- bigrams |>
+  count(w1, w2, sort = TRUE) |>
+  filter(n >= 8)
+
+set.seed(664)
+graph_from_data_frame(edges) |>
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE,
+                 arrow = grid::arrow(length = grid::unit(2, "mm")),
+                 end_cap = circle(2, "mm")) +
+  geom_node_point(color = vcu_teal, size = 3) +
+  geom_node_text(aes(label = name), repel = TRUE, size = 3.5) +
+  theme_void()
+```
+
+The layout is random, so set a seed to get the same picture every time. Reading the picture, look for clusters: a handful of words that connect to each other form a small topic. That is a hint of what topic models will do formally in @sec-lda.
+
+## Cautions
+
+- **Stemming and lemmatizing.** Collapsing "advisor," "advisors," and "advising" into one word can sharpen counts. It can also merge words that differ. We did not do it here so you can see the raw words. The `SnowballC` package provides `wordStem()` if you want to try it.
+- **Counts depend on who talked most.** A student who writes 200 words contributes more tokens than twenty students who write ten each. Check whether a few long answers are driving a result.
+- **Frequency is not importance.** A word that appears in 5% of answers is notable. A word that appears in 5 answers, all identical, is not. We return to this in the next chapter.

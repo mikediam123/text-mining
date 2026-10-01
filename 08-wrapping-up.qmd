@@ -1,0 +1,48 @@
+# Wrapping Up {#sec-wrapup}
+
+We used one dataset and six methods. Here is how they fit together, and how to choose among them for your own projects.
+
+## The same answers, six ways
+
+| Method | Question it answers | What you give it | What you get back |
+|---|---|---|---|
+| Word counts (Ch. 2) | What words come up most? | Text | Frequencies |
+| TF-IDF (Ch. 3) | What words distinguish this group from others? | Text and groups | A distinctiveness score per word |
+| LDA (Ch. 4) | What themes run through the text? | Text and K | Topics and per-document mixes |
+| STM (Ch. 5) | What themes, and do they differ by group? | Text, K, covariates | Topics and effects with uncertainty |
+| Lexicon sentiment (Ch. 6) | How positive or negative is the language? | Text and a lexicon | A score per document |
+| Supervised classification (Ch. 7) | Can we reproduce a human coding? | Text and labels | A predictive model and its accuracy |
+
+## Choosing a method
+
+Start from the question, not the technique.
+
+- *"I want to get a feel for the data."* Counts and bigrams, then read.
+- *"I want to compare two groups."* TF-IDF for a quick look, STM when you want estimates with uncertainty.
+- *"I want themes but have no categories."* Topic models. Plan to spend your time reading and naming.
+- *"I already have a coding scheme."* Supervised classification, to scale it up or to test whether it is learnable.
+- *"I want to know how people feel."* Be careful. Lexicon scores measure vocabulary, and as we saw, concerns are worded with positive words. Consider a supervised model trained on human-rated examples.
+
+## Five habits that carried through the book
+
+1. **Decide what a document is.** Every result depends on it.
+2. **Write your cleaning rules down.** Stop words, placeholder answers, and vocabulary cutoffs are analytic choices.
+3. **Read the data.** Before a method, to know what you are dealing with. After a method, to check what it found.
+4. **Distrust small groups.** Intervals are wide, and rare words get inflated scores.
+5. **Separate "the method found it" from "it is true."** A topic is a pattern in word use. Whether it is a meaningful theme is a judgment.
+
+## Working with student words
+
+The responses in this dataset are real students describing their lives. A few practices follow from that:
+
+- Keep the raw data out of version control, as this project does, and carry only the variables you need.
+- Be careful quoting. A short, specific quote can identify someone even without a name, especially from a small program.
+- Report who is missing. These data over-represent undergraduates and people who came to events or were reached by interviewers. Say so.
+
+## Where to go next
+
+- **Embeddings.** Instead of counting words, represent each answer as a vector that captures meaning, so "advisor" and "counselor" land near each other. This addresses many of the vocabulary limits we hit.
+- **Large language models for coding.** An LLM can apply a codebook to thousands of answers. Everything from Chapter 7 still applies: hold out human-coded answers and measure agreement before trusting it.
+- **Inter-rater reliability.** If two humans code the same answers, how often do they agree? That sets the ceiling for any classifier.
+
+The best next step is a project of your own. Bring a dataset to lab, decide what a document is, and start by reading.

@@ -1,0 +1,187 @@
+# Sentiment Analysis {#sec-sentiment}
+
+**Data for this chapter:** `data/vcu_cares_long.csv`
+
+Sentiment analysis asks how positive or negative the language is. The simplest version is **lexicon-based**: take a dictionary that labels words as positive or negative, count them, and net them out per document. That is what we do here. It is transparent, it needs no training data, and it fails in instructive ways.
+
+```{r}
+#| label: setup
+
+source("R/helpers.R")
+library(tidytext)
+
+vcu <- load_vcu()
+```
+
+## Sentiment lexicons
+
+A lexicon is a word list with sentiment labels. `tidytext` ships the **Bing** lexicon (Hu & Liu, 2004), which marks about 6,800 words as positive or negative.
+
+```{r}
+#| label: bing
+
+bing <- get_sentiments("bing")
+bing |> count(sentiment)
+head(bing, 8)
+```
+
+Two other lexicons are common. **AFINN** scores words from -5 to +5, which gives intensity. **NRC** tags words with emotions like trust and fear. Both are available through `get_sentiments()`, but they require the `textdata` package and a one-time download that asks you to accept a license, so we stick with Bing for reproducibility.
+
+## Scoring each answer
+
+We tokenize, join to the lexicon, and count. Words not in the lexicon simply drop out of the join.
+
+```{r}
+#| label: scores
+
+tokens <- vcu |>
+  unnest_tokens(word, text)
+
+scores <- tokens |>
+  inner_join(bing, by = "word") |>
+  count(doc_id, sentiment) |>
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) |>
+  mutate(net = positive - negative)
+
+# Attach back to every answer; answers with no lexicon words score 0
+vcu_sent <- vcu |>
+  left_join(scores, by = "doc_id") |>
+  mutate(across(c(positive, negative, net), \(x) replace_na(x, 0)),
+         n_words = str_count(text, "\\S+"))
+
+summary(vcu_sent$net)
+mean(vcu_sent$net == 0)
+```
+
+A large share of answers score exactly zero. Many are short, and many contain no word the lexicon knows. A zero here means "no signal," not "neutral."
+
+## Sentiment by question
+
+The three questions were written to invite different feelings, so the first sanity check is whether the scores reflect that.
+
+```{r}
+#| label: fig-sent-question
+#| fig-cap: "Mean net sentiment for each question. Error bars are 95% confidence intervals."
+
+by_q <- vcu_sent |>
+  group_by(question) |>
+  summarise(mean = mean(net), se = sd(net) / sqrt(n()), n = n())
+
+by_q
+
+ggplot(by_q, aes(question, mean)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean - 1.96 * se, ymax = mean + 1.96 * se), width = 0.2) +
+  geom_hline(yintercept = 0, linewidth = 0.3) +
+  labs(x = NULL, y = "Mean net sentiment (positive minus negative words)")
+```
+
+Strengths score clearly positive, and ideas land in between. Concerns are the surprise: their mean is essentially zero, not negative. Answers to "what is your biggest concern?" contain as many positive words as negative ones.
+
+That sounds wrong until you read the answers. Students phrase concerns as wishes ("better support for art students," "more helpful advisors"), and a lexicon sees "better," "support," and "helpful" and scores them positive. It cannot tell that the sentence is a complaint. This is the central limit of lexicon sentiment: it measures the *vocabulary* of positivity, not the *stance* of the speaker.
+
+::: callout-important
+## Compare within a question, not across them
+
+A concern is *supposed* to be negative, so a negative score on a concern says little about how that student feels about VCU. The interesting comparisons are *within* a question: is one group's concern more negative than another's? We do that next.
+:::
+
+## Sentiment by student level
+
+```{r}
+#| label: fig-sent-level
+#| fig-cap: "Net sentiment by question and student level."
+
+vcu_sent |>
+  filter(level %in% c("Undergraduate", "Graduate")) |>
+  group_by(question, level) |>
+  summarise(mean = mean(net), se = sd(net) / sqrt(n()), n = n(), .groups = "drop") |>
+  ggplot(aes(question, mean, fill = level)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(aes(ymin = mean - 1.96 * se, ymax = mean + 1.96 * se),
+                position = position_dodge(width = 0.8), width = 0.2) +
+  scale_fill_manual(values = c(Undergraduate = vcu_teal, Graduate = vcu_gold)) +
+  labs(x = NULL, y = "Mean net sentiment", fill = NULL)
+```
+
+Check whether the intervals for the two levels overlap within each question. Where they do, we cannot say the groups differ, and the gap between the bars is within noise. Resist reading a story into a difference smaller than its error bar.
+
+## Which words drive the score?
+
+Before trusting a sentiment score, find out which words produce it.
+
+```{r}
+#| label: fig-contrib
+#| fig-cap: "Words that contribute most to positive and negative scores."
+#| fig-height: 5.5
+
+tokens |>
+  inner_join(bing, by = "word") |>
+  count(word, sentiment, sort = TRUE) |>
+  group_by(sentiment) |>
+  slice_max(n, n = 12, with_ties = FALSE) |>
+  ungroup() |>
+  ggplot(aes(n, reorder_within(word, n, sentiment))) +
+  geom_col() +
+  scale_y_reordered() +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = "Count", y = NULL)
+```
+
+Read this chart skeptically. Look for words that the lexicon scores one way but that mean something else here. Two words stand out. "Support" is positive in Bing, but in "student support services" it is the name of a program, not an opinion. And "like" is the single most common positive word, yet in "events like the welcome fair" it is a preposition, not an expression of liking. Whenever a topic word or a function word carries a sentiment label, you are measuring the topic, or the grammar, not the feeling.
+
+## Where lexicons fail: negation
+
+Lexicons count words one at a time, so they cannot see "not good." We can at least measure how often a sentiment word follows a negator.
+
+```{r}
+#| label: negation
+
+negators <- c("not", "no", "never", "without", "don't", "doesn't", "isn't",
+              "wasn't", "can't", "couldn't", "won't", "hardly")
+
+bigram_sent <- vcu |>
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) |>
+  filter(!is.na(bigram)) |>
+  separate(bigram, c("w1", "w2"), sep = " ") |>
+  filter(w1 %in% negators) |>
+  inner_join(bing, by = c("w2" = "word"))
+
+bigram_sent |> count(w1, w2, sentiment, sort = TRUE) |> head(10)
+nrow(bigram_sent)
+```
+
+Each of these is a case where Bing assigned the wrong sign. "Not enough" is the biggest: "enough" is positive in the lexicon, but in this dataset it almost always follows "not." Out of roughly 4,600 sentiment-word matches, 164 follow a negator, about 4%. So negation is not wrecking the averages here, but it would matter much more in longer, more argumentative text.
+
+Note that fixing negation does not solve the concern problem above. Dropping "enough" from the lexicon barely moves the mean for concerns. The bigger issue is that concerns are *worded* with positive vocabulary.
+
+## Reading the extremes
+
+As always, check the numbers against the text. Here are the most positive and most negative *concerns*:
+
+```{r}
+#| label: extremes
+
+vcu_sent |>
+  filter(question == "concern", n_words >= 5) |>
+  arrange(net) |>
+  slice_head(n = 4) |>
+  select(net, text)
+
+vcu_sent |>
+  filter(question == "concern", n_words >= 5) |>
+  arrange(desc(net)) |>
+  slice_head(n = 4) |>
+  select(net, text)
+```
+
+Read the most positive concerns and you will see that many are complaints ("there are not enough majors"). Their high scores come from negation and wish-phrasing, not from happiness. This is the kind of result that looks fine in a chart and falls apart when you read it.
+
+Length is a second distortion. Within the concerns, both positive and negative word counts rise with answer length (correlations around .5), so longer answers spread out to the extremes while short ones sit near zero. You could divide by length or use the positive share instead of a raw difference. Neither is clearly right; it depends on whether you think a long complaint is "more negative" than a short one.
+
+## Summary
+
+- Lexicon sentiment is fast, transparent, and crude.
+- Compare within a question, not across questions that invite different feelings.
+- Always inspect the words driving a score. Topic words carrying sentiment labels bias results.
+- Negation, sarcasm, and length all distort scores. The supervised methods in @sec-supervised, or a language model, handle these better, at the cost of transparency.

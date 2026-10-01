@@ -1,0 +1,157 @@
+# The Data {#sec-data}
+
+**Data for this chapter:** `data/vcu_cares_long.csv`, built by `R/01-prep-data.R`
+
+Before any text mining, we need to know what we are mining. This chapter covers where the VCU CARES answers came from, how they are organized, and the cleaning decisions that every later chapter inherits.
+
+## Where the data come from
+
+Interviewers asked VCU students three open-ended questions:
+
+1. What has VCU done really well that has helped you and other students? (we call these **strengths**)
+2. What is the biggest concern you have regarding how VCU supports students? (**concerns**)
+3. What are the top three things VCU can do today to make your experience the best it can be? (**ideas**)
+
+The answers were collected in three batches, which arrive as three sheets in the original Excel workbook. The first and largest batch also has something the others lack: for the strength and concern questions, the interviewer ticked which topics the answer touched on, such as Advising, Dining, or Safety. Those hand-assigned codes become the answer key for the supervised learning in @sec-supervised.
+
+## Load the helpers and the data
+
+```{r}
+#| label: setup
+
+source("R/helpers.R")
+
+vcu_raw <- load_vcu(clean = FALSE)
+
+glimpse(vcu_raw)
+```
+
+The raw workbook is wide: one row per student, with a column for each question and another for each topic checkbox. Text-mining tools want the opposite. `R/01-prep-data.R` stacked the three sheets into a **long** table with one row per *answer*, so each row has:
+
+- `doc_id`: a unique ID for the answer
+- `resp_id`: which student gave it (a student can have up to three answers)
+- `source`, `event`: which batch, and for the event-based forms, which event
+- `level`: undergraduate, graduate, or professional
+- `question`: strength, concern, or idea
+- `text`: what the student said
+- `topics`: the interviewer's topic codes, separated by semicolons (original form, strengths and concerns only)
+
+::: callout-note
+## Demographics were left out on purpose
+
+The workbook also holds major, GPA, gender, and race or ethnicity for some students. No chapter in this book needs them, so the prep script drops them. Carrying less identifying information through an analysis is a good default, and you can always go back to the source file if a later project needs them.
+:::
+
+## Who answered, and what?
+
+```{r}
+#| label: tbl-counts
+
+vcu_raw |>
+  count(source, question) |>
+  pivot_wider(names_from = question, values_from = n)
+```
+
+```{r}
+#| label: tbl-level
+
+vcu_raw |>
+  distinct(resp_id, level) |>
+  count(level) |>
+  mutate(pct = round(100 * n / sum(n), 1))
+```
+
+Undergraduates dominate, and a small number of students have no level recorded. We will keep both facts in mind: a "common" word is common among undergraduates, because they are most of the data.
+
+## How long are the answers?
+
+```{r}
+#| label: fig-length
+#| fig-cap: "Words per answer. Most answers are a phrase or a sentence."
+
+vcu_raw <- vcu_raw |>
+  mutate(n_words = str_count(text, "\\S+"))
+
+ggplot(vcu_raw, aes(n_words)) +
+  geom_histogram(binwidth = 5, boundary = 0) +
+  coord_cartesian(xlim = c(0, 100)) +
+  labs(x = "Words in answer", y = "Number of answers")
+
+summary(vcu_raw$n_words)
+```
+
+The median answer is about a dozen words. That is short, and it will matter repeatedly: with so few words per answer, any single answer gives a method very little to work with. Topic models in particular struggle here, which is why @sec-lda combines a student's answers before modeling.
+
+## Cleaning: answers that say nothing
+
+Some answers are not content at all. Look at the shortest and most common ones:
+
+```{r}
+#| label: tbl-short
+
+vcu_raw |>
+  filter(n_words <= 3) |>
+  mutate(text = str_to_lower(str_squish(text))) |>
+  count(text, sort = TRUE) |>
+  head(15)
+```
+
+"None," "n/a," "nothing," and "test" are the interviewer's or the student's way of skipping the question. Left in, they would show up as some of the most frequent "words" in the whole dataset and tell us nothing about student experience.
+
+The pattern in `R/helpers.R` names these placeholders. Here is how many answers it catches, and what a handful of the removed ones look like:
+
+```{r}
+#| label: tbl-placeholders
+
+vcu_raw <- vcu_raw |>
+  mutate(is_placeholder = str_detect(str_to_lower(str_squish(text)), placeholder_pattern))
+
+vcu_raw |> count(is_placeholder) |> mutate(pct = round(100 * n / sum(n), 1))
+
+vcu_raw |> filter(is_placeholder) |> slice_sample(n = 8, replace = FALSE) |> select(question, text)
+```
+
+::: callout-warning
+## Every cleaning rule is a decision
+
+We removed answers like "none" because they carry no content. But "no concerns" in response to the *concern* question is arguably a real answer: it says this student has no concern. Whether to drop it depends on your question. If you are counting themes, drop it. If you were estimating how many students are satisfied, you would keep it. Write your rules down, as the helper file does, so someone else can see and change them.
+:::
+
+From here on, `load_vcu()` applies that rule by default.
+
+```{r}
+#| label: vcu
+
+vcu <- load_vcu()
+nrow(vcu_raw); nrow(vcu)
+```
+
+## What counts as a document?
+
+Text-mining methods compare "documents," and you get to decide what a document is. That choice shapes every result:
+
+| Document is... | Good for | Cost |
+|---|---|---|
+| One answer | Classification, sentiment per answer | Very little text per document |
+| One student (all three answers) | Topic models | Mixes strengths and concerns |
+| One question (all strengths, all concerns, all ideas) | Comparing the three questions | Only three documents |
+| One topic code | Comparing topics | Depends on the interviewers' coding |
+
+We will use several of these. When a chapter's result seems odd, ask first whether the document unit is the problem.
+
+## Read before you mine
+
+One last habit, and the most important: read some of the data. Pull a random handful of answers from each question.
+
+```{r}
+#| label: read-sample
+
+set.seed(664)
+vcu |>
+  group_by(question) |>
+  slice_sample(n = 4) |>
+  ungroup() |>
+  select(question, level, text)
+```
+
+Notice how different the three questions sound. Strengths name things ("TRIO," "the library"). Concerns describe problems. Ideas are imperative ("more events"). Whatever the methods in the next chapters find, they will be finding differences like these, and your reading is how you will check them.

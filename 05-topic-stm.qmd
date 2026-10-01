@@ -1,0 +1,202 @@
+# Topic Models II: Structural Topic Models {#sec-stm}
+
+**Data for this chapter:** `data/vcu_cares_long.csv`
+
+LDA gave us themes, but it treats every student the same. It cannot tell us whether graduate students raise different themes than undergraduates, except by a second step after the fact: take each document's topics and compare them across groups by hand.
+
+The **structural topic model (STM)** (Roberts, Stewart, & Tingley, 2019) builds that comparison into the model. You tell it about document-level characteristics, such as student level, and it lets the *prevalence* of each topic depend on them. The result is a topic model that can answer "which topics are more common among graduate students, and how sure are we?"
+
+```{r}
+#| label: setup
+
+source("R/helpers.R")
+library(stm)
+
+vcu <- load_vcu()
+```
+
+## What STM adds
+
+| | LDA | STM |
+|---|---|---|
+| Finds topics from word co-occurrence | Yes | Yes |
+| Topic prevalence can depend on covariates | No | Yes (`prevalence`) |
+| Topic *wording* can depend on covariates | No | Yes (`content`) |
+| Built-in tools for choosing K and for effects | Few | Many (`searchK`, `estimateEffect`) |
+
+We use the first extension, prevalence. Wording differences (the `content` option) are powerful but need more data per group than we have.
+
+## Documents and covariates
+
+As before, we combine each student's answers into one document. This time we also keep a covariate: student level. A small number of students are professional or missing a level, and one-off groups that small cannot support an estimate, so we compare undergraduates with graduate students.
+
+```{r}
+#| label: docs
+
+docs <- vcu |>
+  filter(level %in% c("Undergraduate", "Graduate")) |>
+  group_by(resp_id, level) |>
+  summarise(text = paste(text, collapse = " "), .groups = "drop") |>
+  mutate(level = factor(level, levels = c("Undergraduate", "Graduate")))
+
+count(docs, level)
+```
+
+## Preprocess with `textProcessor()`
+
+STM has its own preprocessing: it lowercases, removes punctuation and numbers, drops stop words, and optionally stems. We turn stemming off so that the topic words stay readable, and pass the same domain stop words used earlier.
+
+```{r}
+#| label: process
+
+custom_stops <- c("vcu", "student", "students", "like", "get", "just",
+                  "really", "also", "can", "lot")
+
+processed <- textProcessor(
+  documents       = docs$text,
+  metadata        = docs,
+  stem            = FALSE,
+  customstopwords = custom_stops,
+  verbose         = FALSE
+)
+
+# Drop words that appear in fewer than 5 documents, and the documents that
+# end up empty. prepDocuments keeps the metadata aligned.
+out <- prepDocuments(processed$documents, processed$vocab, processed$meta,
+                     lower.thresh = 5, verbose = FALSE)
+
+length(out$documents); length(out$vocab)
+```
+
+::: callout-warning
+## Metadata must stay aligned with documents
+
+If `textProcessor` or `prepDocuments` drops a document, the metadata rows must go with it. Always use `out$meta`, never the original `docs`, in everything that follows. Mixing them up silently pairs the wrong covariate with the wrong document.
+:::
+
+## Fit the model
+
+The `prevalence` formula says which covariates should shift topic proportions. `init.type = "Spectral"` gives a stable, deterministic starting point, so you get the same topics each time without hunting for a good seed.
+
+```{r}
+#| label: fit
+
+K <- 8
+
+fit <- stm(
+  documents  = out$documents,
+  vocab      = out$vocab,
+  K          = K,
+  prevalence = ~ level,
+  data       = out$meta,
+  init.type  = "Spectral",
+  seed       = 664,
+  verbose    = FALSE
+)
+```
+
+## Reading the topics
+
+`labelTopics()` reports four word lists per topic. Two matter most:
+
+- **Prob**: the most probable words (like LDA's beta)
+- **FREX**: words that are both frequent *and* exclusive to the topic. These are usually the best for naming, because they avoid words that are common everywhere.
+
+```{r}
+#| label: labels
+
+labelTopics(fit, n = 7)
+```
+
+Name each topic from FREX plus Prob, as you did for LDA. Then check the names against real text with `findThoughts()`, which returns the documents most dominated by a topic.
+
+```{r}
+#| label: thoughts
+
+thoughts <- findThoughts(fit, texts = out$meta$text, n = 2, topics = 1:3)
+thoughts$docs[[1]]
+```
+
+Repeat for each topic. A topic whose top documents do not hang together is not ready to be reported.
+
+## How big is each topic?
+
+```{r}
+#| label: fig-summary
+#| fig-cap: "Expected topic proportions, with the top words of each topic."
+#| fig-height: 6
+
+plot(fit, type = "summary", n = 5, xlim = c(0, 0.4))
+```
+
+## The payoff: topics by student level
+
+Now we can ask whether graduate and undergraduate students differ. `estimateEffect()` regresses each document's topic proportion on the covariate, and propagates the model's uncertainty about those proportions into the standard errors. This is more honest than averaging the proportions and comparing them directly.
+
+```{r}
+#| label: effect
+
+effect <- estimateEffect(1:K ~ level, fit, metadata = out$meta)
+summary(effect, topics = 1:3)
+```
+
+Each topic's regression has an intercept (the expected proportion for undergraduates) and a `levelGraduate` coefficient (how much higher or lower graduate students are). A coefficient of 0.03 means graduate students devote 3 percentage points more of their answers to that topic.
+
+Rather than read eight regression tables, plot the differences.
+
+```{r}
+#| label: fig-effect
+#| fig-cap: "Difference in topic proportion, Graduate minus Undergraduate. Intervals that cross zero are not distinguishable from no difference."
+#| fig-height: 6
+
+plot(effect,
+     covariate  = "level",
+     topics     = 1:K,
+     model      = fit,
+     method     = "difference",
+     cov.value1 = "Graduate",
+     cov.value2 = "Undergraduate",
+     xlab       = "More undergraduate  <---->  More graduate",
+     labeltype  = "custom",
+     custom.labels = paste("Topic", 1:K),
+     verbose.labels = FALSE)
+```
+
+Read this the way you read any effect estimate: look at the interval, not just the point. Most differences will be small and cross zero, because we have fewer than 200 graduate students. A topic whose interval clearly excludes zero is a candidate finding. Go back and read the graduate and undergraduate documents for that topic before saying anything about it.
+
+::: callout-important
+## Eight topics, eight tests
+
+We are looking at eight differences at once. Some intervals will exclude zero by chance. Treat the topic-by-level comparisons as a way to generate hypotheses, and confirm anything interesting by reading and by a different sample if you can.
+:::
+
+## Choosing K with `searchK()`
+
+STM includes tools for comparing values of K using held-out likelihood, residuals, and semantic coherence.
+
+```{r}
+#| label: searchk
+#| eval: false
+
+# Takes a few minutes; run it when you are ready to wait
+k_search <- searchK(out$documents, out$vocab, K = c(4, 6, 8, 10, 12),
+                    prevalence = ~ level, data = out$meta,
+                    init.type = "Spectral", verbose = FALSE)
+
+plot(k_search)
+```
+
+`plot(k_search)` shows four diagnostics. Look for a K where held-out likelihood has leveled off and residuals are low, while semantic coherence has not collapsed. As with LDA, the diagnostics narrow the range and you choose within it by reading.
+
+## Cautions
+
+- **The covariate adjusts topic prevalence; it does not explain it.** A difference by level could reflect program differences, the interviewer, or who was available at which event.
+- **Small groups give wide intervals.** If a result matters, check it by reading the underlying documents.
+- **STM is still a bag-of-words model.** It does not read word order, negation, or sarcasm.
+
+## Summary
+
+- STM is LDA that knows about your covariates.
+- Name topics from FREX words, then verify with `findThoughts()`.
+- `estimateEffect()` gives properly uncertain comparisons of topic prevalence between groups.
+- Use `out$meta`, not your original data frame, after preprocessing.

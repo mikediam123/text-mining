@@ -1,0 +1,52 @@
+/*-- scss:defaults --*/
+
+// Course palette, carried over from the EDUS 664 materials
+$teal:        #1a7a6e;
+$teal-light:  #e0f2ef;
+$dark:        #1a2e2b;
+
+$primary:     $teal;
+$body-color:  #2c2c2c;
+$link-color:  $teal;
+
+$font-family-sans-serif: Georgia, "Times New Roman", serif;
+$font-size-root: 17px;
+
+/*-- scss:rules --*/
+
+h1, h2, h3, h4 {
+  color: $dark;
+  font-weight: 600;
+}
+
+h2 {
+  border-bottom: 2px solid $teal-light;
+  padding-bottom: 0.25rem;
+  margin-top: 2rem;
+}
+
+// Code blocks: sans-serif mono, set apart from the prose
+pre, code {
+  font-family: "Consolas", "Menlo", "Monaco", monospace;
+  font-size: 0.88em;
+}
+
+div.sourceCode {
+  border-left: 3px solid $teal;
+  background-color: #f7f9f8;
+}
+
+// Callout tinting to match the course site
+.callout-note {
+  border-left-color: $teal !important;
+}
+
+blockquote {
+  border-left: 3px solid $teal;
+  color: #555;
+  font-style: italic;
+}
+
+.sidebar-title {
+  color: $teal;
+}

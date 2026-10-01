@@ -1,0 +1,60 @@
+# Welcome {.unnumbered}
+
+This is a lab guide to text mining in R. It is meant to give lab members a working sense of what the main text-mining techniques do, when each one is the right tool, and what each one cannot tell you.
+
+We work through a single dataset the whole way. VCU CARES is a set of short interviews with VCU students about what the university does well, what worries them, and what they would change. Using one dataset means you can watch the same answers get described, grouped, scored, and predicted in different ways, and compare what each method gives you.
+
+## The path through the book
+
+The chapters move from methods that describe the text to methods that model it.
+
+| Part | Chapter | What you learn |
+|---|---|---|
+| Getting started | 1. The data | Structure, cleaning, and what counts as a "document" |
+| | 2. Tokens | Turning text into words, and counting them |
+| Descriptive | 3. TF-IDF | Which words characterize one group of answers versus another |
+| Finding structure | 4. Topic models I: LDA | Letting the computer propose themes |
+| | 5. Topic models II: STM | Themes that can vary by student characteristics |
+| | 6. Sentiment | Scoring how positive or negative the language is |
+| Supervised learning | 7. Classification | Predicting the interviewers' topic codes from the text |
+| | 8. Wrapping up | Choosing among methods, and reporting honestly |
+
+Each chapter builds on the last, so I'd read them in order the first time.
+
+## How to use this book
+
+Each chapter follows the same shape. We state a question, run the code that answers it, and then read the output critically. Code appears in gray blocks, and you can copy any block by hovering over it and clicking the copy icon.
+
+Work through a chapter with RStudio open next to your browser and run each block as you go. Text mining in particular rewards poking around: change a stop-word list, change the number of topics, and watch what moves.
+
+::: callout-important
+## A note on the data
+
+The VCU CARES responses are real students' words. The data files are not part of this repository and should never be added to it. See `SETUP.md` for how to get the data onto your machine and how the project keeps it out of version control.
+:::
+
+## Software you will need
+
+You will need R and RStudio, both free, plus Quarto if you want to render the book yourself. Install the packages once:
+
+```{r}
+#| eval: false
+
+install.packages(c(
+  "tidyverse",    # data management and graphics
+  "readxl",       # reading the Excel workbook
+  "tidytext",     # tokenizing, TF-IDF, sentiment lexicons
+  "topicmodels",  # LDA (Chapter 4)
+  "stm",          # structural topic models (Chapter 5)
+  "glmnet",       # regularized regression (Chapter 7)
+  "ggraph",       # network plots of word pairs (Chapter 2)
+  "igraph",       # used by ggraph
+  "rsample"       # train/test splitting (Chapter 7)
+))
+```
+
+`topicmodels` needs the GNU Scientific Library on some systems. If installation fails on Linux, install `libgsl-dev` first. Mac and Windows users usually have no problem.
+
+## A word on what text mining is not
+
+Text mining does not replace reading. Every method here compresses thousands of answers into something small enough to look at, and every compression loses something. Throughout the book I will ask you to go back to the original answers and check that the numbers mean what they seem to mean. That habit matters more than any particular function.
