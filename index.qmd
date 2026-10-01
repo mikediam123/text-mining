@@ -57,7 +57,8 @@ install.packages(c(
   "glmnet",       # regularized regression (Chapter 7)
   "ggraph",       # network plots of word pairs (Chapter 2)
   "igraph",       # used by ggraph
-  "rsample"       # train/test splitting (Chapter 7)
+  "rsample",      # train/test splitting (Chapter 7)
+  "reshape2"      # needed by tidytext to tidy topic models (Chapters 4-5)
 ))
 ```
 

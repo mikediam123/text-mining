@@ -7,7 +7,7 @@ You need R, RStudio, and Quarto (bundled with recent RStudio; check with `quarto
 ```r
 install.packages(c(
   "tidyverse", "readxl", "tidytext", "topicmodels", "stm",
-  "glmnet", "ggraph", "igraph", "rsample"
+  "glmnet", "ggraph", "igraph", "rsample", "reshape2"
 ))
 ```
 

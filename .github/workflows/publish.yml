@@ -38,6 +38,7 @@ jobs:
             any::tidyverse
             any::readxl
             any::tidytext
+            any::reshape2
             any::topicmodels
             any::stm
             any::glmnet
