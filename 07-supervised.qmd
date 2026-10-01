@@ -6,6 +6,8 @@ Everything so far has been **unsupervised**: we asked the computer to find patte
 
 Our answer key is the interviewers' topic codes. For most strength and concern answers in the original form, the interviewer ticked which topics the student discussed (Advising, Dining, Safety, and so on). Can a model look only at the words and predict those ticks?
 
+By the end of this chapter you will be able to explain how a supervised model is trained and tested, build a model that predicts a topic code from text, and judge it with the measures that matter (and avoid the one that misleads).
+
 ```{r}
 #| label: setup
 
@@ -16,6 +18,20 @@ library(Matrix)
 
 vcu <- load_vcu()
 ```
+
+`glmnet` fits the model we use (a regularized regression, explained below). `Matrix` provides the efficient "sparse" matrices we build for it.
+
+## The idea of supervised learning
+
+Think of how you would teach a new research assistant to code answers into topics. You would show them a stack of answers that have already been coded. They would notice patterns ("answers that mention *dorm* and *rent* are coded Housing") and then try coding new answers on their own. To check how well they learned, you would give them answers *they have not seen* and compare their codes to the correct ones.
+
+A supervised model does the same, with three pieces:
+
+- **Training data**: answers with known codes, which the model learns from.
+- **Test data**: answers with known codes that are *held back*, used only to grade the finished model.
+- **Features**: the numbers that describe each answer to the model. Here they will be TF-IDF scores for each word.
+
+The held-back test data is the crucial piece. A model can always do well on data it has already seen, just by memorizing it. The only fair question is how it does on new answers.
 
 ## Why bother?
 
@@ -38,7 +54,11 @@ labeled <- vcu |>
 nrow(labeled)
 ```
 
-Each answer can have several codes, so this is a **multi-label** problem. The easiest way to handle that is to treat each topic as its own yes/no question. Let us see how common each topic is.
+- `filter(!is.na(topics))` keeps answers that have a topic code (the `!` means "not," so "not missing").
+- `text_id = row_number()` gives every kept answer a new ID, 1, 2, 3, and so on, which we will use to line up rows with matrix positions.
+- `str_split(topics, ";\\s*")` splits each answer's codes, stored as a single string like "Advising; Safety," into a *list* of separate codes (`"Advising"`, `"Safety"`). The pattern `;\\s*` means "a semicolon followed by any spaces." The `topics` column now holds a list for each answer.
+
+Each answer can have several codes, so this is a **multi-label** problem. The easiest way to handle that is to treat each topic as its own yes/no question: "Is this answer about Advising?" "Is it about Safety?" Let us see how common each topic is.
 
 ```{r}
 #| label: fig-topic-freq
@@ -55,6 +75,8 @@ topic_counts |>
   labs(x = "Answers with this code", y = NULL)
 ```
 
+`unnest(topics)` is the opposite of the splitting we just did: it turns each list of codes into separate rows, one per code, so we can count them. `mutate(pct = ...)` records each code's share of all labeled answers.
+
 Some topics are common ("Student activities"), and some are rare ("Staff development"). Rare topics will be hard to learn: with only a dozen examples, there is little for the model to generalize from. We start with one topic and then scale up.
 
 ```{r}
@@ -66,6 +88,11 @@ labeled <- labeled |>
 
 mean(labeled$y)
 ```
+
+- `target <- "Student activities"` names the topic we will predict. Change it to try another.
+- `map_lgl(topics, \(t) target %in% t)` goes through each answer's list of codes and asks "is the target one of them?", returning `TRUE` or `FALSE` for each. (`map_lgl` is a function that applies a small function to each item and returns logical values. The `\(t) ...` is the small function: "given a list of codes `t`, check whether the target is in it.")
+- The result is saved as a new column `y`. By tradition, **`y` is the thing we want to predict**, called the *outcome* or *label*.
+- `mean(labeled$y)` gives the share of `TRUE` values, which is the share of answers carrying this code.
 
 About one answer in five carries this code. That imbalance matters for how we judge the model, as we will see.
 
@@ -89,9 +116,15 @@ test  <- labeled |> filter( resp_id %in% test_students)
 c(train = nrow(train), test = nrow(test))
 ```
 
+- `set.seed(664)` makes the random split reproducible (see @sec-r-primer).
+- `unique(labeled$resp_id)` lists each student once.
+- `sample(students, size = ...)` picks a random set of students. `round(0.2 * length(students))` is 20% of them.
+- The last two lines build the two tables: `train` has answers from students *not* in the test set (`!resp_id %in% test_students`), and `test` has answers from students who *are*.
+- `c(train = ..., test = ...)` prints the two sizes side by side.
+
 ## Step 3: Turn text into numbers
 
-The model needs a matrix: one row per answer, one column per word. We use TF-IDF weights from @sec-tfidf. The key discipline is that the **vocabulary and the idf values come only from the training data**, and the test set is converted using those same values.
+A statistical model cannot read words. It needs numbers: a **matrix** with one row per answer and one column per word. We use TF-IDF weights from @sec-tfidf. The key discipline is that the **vocabulary and the idf values come only from the training data**, and the test set is converted using those same values.
 
 ```{r}
 #| label: features
@@ -140,13 +173,34 @@ x_test  <- featurize(test)
 dim(x_train); dim(x_test)
 ```
 
+This block has the most new code so far. It is easier to read as three pieces.
+
+**Piece 1: a reusable function, `tokenize()`.** We have been writing steps one at a time; here we package a series of steps as our own **function** so we can reuse it. `function(d) { ... }` defines a recipe that takes a table `d`, and the lines inside the braces `{ }` are the steps. This one keeps the ID and text columns, splits into words, removes stop words, and removes numbers. Whatever the last line produces is what the function returns. Once defined, `tokenize(train)` runs the whole recipe on the training data.
+
+**Piece 2: the vocabulary, from training data only.** `train_tok` holds the training words. Then:
+
+- `distinct(text_id, word)` keeps one row per answer-word pair, and `count(word, name = "df")` counts how many different *answers* contain each word. We name that count `df` (for *document frequency*).
+- `filter(df >= 5)` keeps only words found in at least five training answers.
+- `mutate(idf = log(nrow(train) / df))` computes each word's **IDF**, the rarity score from @sec-tfidf, using the number of training answers. `log()` is the natural logarithm.
+
+We then print how many words survive.
+
+**Piece 3: a second function, `featurize()`, that builds the matrix.** It takes any set of answers `d` and produces a TF-IDF matrix using the training vocabulary.
+
+- The first half counts words per answer, keeps only vocabulary words (`inner_join(vocab_df, by = "word")`), and computes each word's **TF** (`tf = n / sum(n)`, the share of the answer's words that this word is, calculated within each answer thanks to `group_by(text_id)`). It then has everything needed for TF-IDF.
+- `sparseMatrix()` builds the matrix. You tell it, for each non-zero cell, which row (`i`), which column (`j`), and what value (`x`). Here `i` is the answer's position, `j` is the word's position in the vocabulary (`match()` finds a position by lookup), and `x` is `tf * idf`, the TF-IDF score. `dims` fixes the matrix's size and `dimnames` labels the columns with the words.
+
+We then build one matrix for training and one for testing, and print their sizes (`dim()` gives rows and columns). Notice they have the **same number of columns** but different numbers of rows.
+
 Both matrices have the same columns, which is what lets a model trained on one score the other. Words in the test set that never appeared in training are simply ignored: the model has nothing to say about them.
 
 The matrix is **sparse**: nearly every cell is zero, since each answer uses only a handful of the few hundred vocabulary words. Storing it as a sparse matrix keeps it small.
 
 ## Step 4: Fit a regularized logistic regression
 
-With more columns than a regression can handle comfortably, we use the **lasso** (`glmnet` with `alpha = 1`). It is logistic regression with a penalty on the size of the coefficients, which pushes most of them exactly to zero. The result is a short list of words that matter. `cv.glmnet()` picks the penalty strength (`lambda`) by cross-validation inside the training data.
+Now the model itself. We use **logistic regression**, a standard method for predicting a yes/no outcome. It produces, for each answer, a **probability** that the answer carries the code (for instance, 0.83 means "83% likely"). It does so by giving each word a **coefficient**: a number saying how strongly that word pushes the prediction toward "yes" (positive) or "no" (negative).
+
+The problem is that we have hundreds of words and only a modest number of answers. A plain regression would latch onto every quirk of the training data, which is called **overfitting**. The fix is **regularization**: adding a penalty on the size of the coefficients, so the model only keeps a word if it earns its place. We use the **lasso**, a kind of regularization that pushes most coefficients all the way to zero. The result is a short list of words that matter, which is easy to read.
 
 ```{r}
 #| label: fit
@@ -159,7 +213,20 @@ fit$lambda.1se
 sum(coef(fit, s = "lambda.1se")[-1] != 0)   # words with a nonzero coefficient
 ```
 
-`lambda.1se` is the most-penalized model within one standard error of the best. It is simpler than the single best model and usually generalizes about as well.
+`cv.glmnet()` fits the model. The options that matter:
+
+| Option | What it means |
+|---|---|
+| `x_train` | The matrix of word scores (the features) |
+| `train$y` | The yes/no outcome to learn |
+| `family = "binomial"` | "The outcome is yes/no," which makes this logistic regression |
+| `alpha = 1` | Use the lasso penalty. (Setting it to 0 gives a different penalty, called ridge, that shrinks coefficients but does not zero them out. Values in between mix the two) |
+| `type.measure = "auc"` | The score used to choose the penalty strength. AUC is explained shortly |
+
+**How strong should the penalty be?** The strength is called **lambda**. Too small and the model overfits; too large and it ignores everything. `cv.glmnet()` finds a good value using **cross-validation**: it splits the *training* data into pieces, repeatedly trains on most of the pieces and tests on the one left out, and averages the results across many lambda values. (The test data we set aside is never touched during this.)
+
+- `fit$lambda.1se` prints the chosen penalty strength. It is the largest penalty whose score is within one standard error of the best, which gives a simpler model that usually generalizes about as well as the single best one. (The alternative, `fit$lambda.min`, picks the single best.)
+- The last line counts the words with a non-zero coefficient, the words the lasso kept. `coef(fit, s = "lambda.1se")` extracts the coefficients; `[-1]` drops the first one (the intercept, a baseline that is not a word); `!= 0` asks which are not zero; and `sum()` counts the `TRUE`s.
 
 ## Step 5: Judge it on data it has not seen
 
@@ -171,7 +238,9 @@ test$p <- as.numeric(predict(fit, x_test, s = "lambda.1se", type = "response"))
 head(test |> select(text, y, p), 6)
 ```
 
-Each answer gets a predicted probability. To turn it into a yes/no call, pick a threshold. Start at 0.5, and note that this is a choice.
+`predict()` applies the fitted model to new data. We give it the test matrix (`x_test`), the penalty to use (`s = "lambda.1se"`), and `type = "response"`, which asks for probabilities instead of raw scores. `as.numeric()` converts the result to a plain list of numbers, and we store it as a new column `p` in the test table. The last line shows six answers with the true label `y` and the model's probability `p`.
+
+Each answer gets a predicted probability. To turn it into a yes/no call, pick a **threshold**: calls above it are "yes," the rest "no." Start at 0.5, and note that this is a choice.
 
 ```{r}
 #| label: metrics
@@ -199,14 +268,24 @@ metrics(test$y, test$p)
 auc(test$y, test$p)
 ```
 
+These are two more functions we wrote ourselves. `metrics()` takes the true answers (`truth`), the model's probabilities (`p`), and a threshold (with a default of 0.5, written `threshold = 0.5`, so you can leave it out), and counts four kinds of outcome:
+
+| | Model says YES | Model says NO |
+|---|---|---|
+| **Truly yes** | `tp` (true positive: correct hit) | `fn` (false negative: a miss) |
+| **Truly no** | `fp` (false positive: false alarm) | `tn` (true negative: correct rejection) |
+
+This 2×2 grid is called a **confusion matrix**. Everything below is calculated from its four cells. `pred <- p >= threshold` makes the yes/no calls, and each `sum(pred & truth)` counts the answers where both are `TRUE`, and so on. (The `&` means "and.")
+
 Read the output before the definitions. At a threshold of 0.5 the model is cautious: when it says "Student activities" it is nearly always right (high precision), but it says so rarely and misses most of the real ones (low recall). The AUC of about 0.8 says the probabilities do carry useful signal; the 0.5 cutoff is just not the best place to draw the line.
 
-Four numbers deserve plain definitions:
+Five numbers deserve plain definitions:
 
-- **Accuracy**: the share of all calls that were right.
-- **Precision**: of the answers the model called "Student activities," the share that really are.
-- **Recall**: of the answers that really are "Student activities," the share the model found.
-- **F1**: a single number balancing precision and recall.
+- **Accuracy**: the share of all calls that were right, (tp + tn) / total.
+- **Precision**: of the answers the model called "Student activities," the share that really are. tp / (tp + fp). It answers "when it says yes, can I trust it?"
+- **Recall**: of the answers that really are "Student activities," the share the model found. tp / (tp + fn). It answers "how many of the real ones did it catch?"
+- **F1**: a single number that balances precision and recall (it is their *harmonic mean*, which is low whenever either one is low).
+- **AUC** (area under the curve): how well the model *ranks* answers, regardless of any threshold. It equals the chance that a randomly chosen "yes" answer gets a higher probability than a randomly chosen "no" answer. **0.5 means guessing; 1.0 means perfect ranking.** The `auc()` function computes it from the ranks of the predictions.
 
 ### Accuracy alone is misleading
 
@@ -218,7 +297,7 @@ A model that says "no" to every answer gets an accuracy equal to the share of "n
 1 - mean(test$y)
 ```
 
-That is the bar to beat. Our model's accuracy is only a few points above it, even though the model is clearly doing something useful, which is why accuracy is a poor yardstick when one class is rare. Precision, recall, and AUC tell you much more. AUC does not depend on a threshold: 0.5 means guessing, 1.0 means perfect.
+That is the bar to beat. Our model's accuracy is only a few points above it, even though the model is clearly doing something useful, which is why accuracy is a poor yardstick when one class is rare. Precision, recall, and AUC tell you much more.
 
 ### The threshold is a dial
 
@@ -237,6 +316,11 @@ map_dfr(seq(0.05, 0.8, by = 0.05),
   scale_color_manual(values = c(f1 = vcu_dark, precision = vcu_teal, recall = vcu_gold)) +
   labs(x = "Threshold", y = NULL, color = NULL)
 ```
+
+- `seq(0.05, 0.8, by = 0.05)` makes a list of thresholds from 0.05 to 0.8 in steps of 0.05.
+- `map_dfr(..., \(th) metrics(...))` runs our `metrics()` function once for each threshold and stacks the results into one table, adding a `threshold` column.
+- `pivot_longer(-threshold)` reshapes the table (the reverse of `pivot_wider`): the columns for precision, recall, and F1 are gathered into one `name` column and one `value` column, which is the shape `ggplot` needs to draw three lines. The `-threshold` means "everything except this column."
+- `color = name` draws a separate colored line for each measure.
 
 Which threshold is right depends on the job. If a human will review every flagged answer, favor recall: you do not want to miss any. If the model's calls go straight into a report, favor precision.
 
@@ -261,6 +345,10 @@ coef_df |>
   labs(x = "Coefficient (log-odds)", y = NULL)
 ```
 
+The first part pulls the coefficients into a table with one row per word, dropping the intercept and any word whose coefficient the lasso set to zero. The chart keeps the 24 words with the largest coefficients in either direction (`abs()` takes the absolute value, ignoring sign) and colors each bar by whether it is positive (teal) or negative (gold) (`fill = beta > 0`).
+
+The units are **log-odds**. You do not need to interpret them precisely: a positive number means the word makes "yes" more likely, a negative one makes it less likely, and a bigger number is a stronger push.
+
 Do these words make sense for the topic? If you see "events," "clubs," and "organizations" pushing up, the model learned something real. If you see odd words, such as the name of one interviewer's favorite example, it is learning quirks of the data, and you should be skeptical.
 
 ## Step 7: Read the mistakes
@@ -284,6 +372,8 @@ test |>
   slice_head(n = 6) |>
   select(p, text)
 ```
+
+The first block takes the answers that *were* coded with the topic (`filter(y)`), sorts them by the model's probability from lowest to highest (`arrange(p)`), and shows the first six: the ones the model was most sure were *not* the topic. The second block does the reverse: answers that were *not* coded (`filter(!y)`), sorted from highest probability down (`arrange(desc(p))`): the ones the model was most sure *were* the topic.
 
 Mistakes usually fall into three bins. Some are real model failures: the answer is clearly about activities, and the model missed it, often because it uses a word the training data never saw. Some are **label noise**: the answer is not really about activities, and the interviewer ticked the box anyway, or the reverse. And some are judgment calls that two human coders would disagree about. If many errors are the second and third kind, the model's ceiling is limited by the labels, not by the algorithm.
 
@@ -320,6 +410,13 @@ results <- map_dfr(common_topics, fit_topic) |> arrange(desc(auc))
 results |> mutate(across(where(is.numeric), \(x) round(x, 2)))
 ```
 
+`fit_topic()` is a third function of our own. Given a topic name, it repeats everything we just did: builds the yes/no outcome for that topic in the training and test sets, fits the lasso, predicts for the test set, and returns one row of results (the topic, how common it is, AUC, precision, recall, and F1). A few details:
+
+- For the threshold, it uses each topic's own base rate in the training data (`th <- mean(y_tr)`). That is a rough and reasonable choice, because rare topics need a lower bar than common ones. (At 0.5, rare topics would almost never be flagged.)
+- `bind_cols()` joins two small tables side by side.
+
+After defining it, we select the topics worth modeling: those with at least 80 labeled answers (`filter(n >= 80)`), excluding the catch-all "Other" (`setdiff()` removes items from a list). `map_dfr(common_topics, fit_topic)` then runs `fit_topic()` for each, stacking the rows, and `arrange(desc(auc))` sorts the best-predicted topic to the top. The last line rounds all the number columns to two decimals (`across(where(is.numeric), ...)` means "every column that holds numbers").
+
 ```{r}
 #| label: fig-auc
 #| fig-cap: "Test-set AUC for each topic. The dashed line is chance."
@@ -330,6 +427,8 @@ ggplot(results, aes(auc, reorder(topic, auc))) +
   xlim(0.45, 1) +
   labs(x = "AUC on held-out students", y = NULL)
 ```
+
+This plots each topic's AUC as a dot. The dashed line at 0.5 marks chance; dots to its right mean the model beats guessing. (`xlim(0.45, 1)` sets the horizontal range.)
 
 In this synthetic data, how well a topic is predicted mostly reflects how many examples it has and how much noise was built in, not how abstract the topic is. With real interviews you would expect a wider spread: concrete topics such as housing or financial aid tend to be easy, because students use distinctive words for them, while abstract topics such as "sense of belonging" tend to be harder, because students express them in many different ways. When that happens, a topic's difficulty tells you something about the topic as much as about the model.
 
@@ -348,7 +447,8 @@ A good model does not prove the labels are *right*. It shows that the labels are
 
 ## Summary
 
-- Split first, by student, and build the vocabulary from training data only.
-- A lasso on TF-IDF gives a strong, interpretable baseline.
-- Judge with precision, recall, and AUC, not accuracy, when classes are imbalanced.
+- A supervised model learns from labeled **training** data and is graded on held-out **test** data.
+- Split first, by student, and build the vocabulary from training data only, to avoid **data leakage**.
+- A **lasso** on TF-IDF gives a strong, interpretable baseline: most words get a coefficient of zero, and the rest show what drives the prediction.
+- Judge with **precision**, **recall**, and **AUC**, not accuracy, when classes are imbalanced. The **threshold** is a dial that trades one against the other.
 - Read the errors. They tell you whether to improve the model or the labels.

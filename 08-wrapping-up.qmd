@@ -1,8 +1,10 @@
 # Wrapping Up {#sec-wrapup}
 
-We used one dataset and six methods. Here is how they fit together, and how to choose among them for your own projects.
+We used one dataset and six methods. This chapter pulls them together: what each one is for, how to choose among them, how to describe what you did in writing, and where to go next. There is no new code here, only the thinking that should surround the code.
 
 ## The same answers, six ways
+
+Each method looked at the same text and asked a different question.
 
 | Method | Question it answers | What you give it | What you get back |
 |---|---|---|---|
@@ -12,6 +14,15 @@ We used one dataset and six methods. Here is how they fit together, and how to c
 | STM (Ch. 5) | What themes, and do they differ by group? | Text, K, covariates | Topics and effects with uncertainty |
 | Lexicon sentiment (Ch. 6) | How positive or negative is the language? | Text and a lexicon | A score per document |
 | Supervised classification (Ch. 7) | Can we reproduce a human coding? | Text and labels | A predictive model and its accuracy |
+
+A useful way to sort them is by **how much you tell the computer in advance**.
+
+- **Descriptive methods** (counts, TF-IDF) tell it nothing except how to split text into words. They summarize what is there.
+- **Unsupervised methods** (topic models) tell it how many themes to look for, and let it propose them. You decide what the themes mean.
+- **Lexicon methods** (sentiment) tell it what words mean, through a dictionary someone else built.
+- **Supervised methods** (classification) tell it the right answers for some examples, and ask it to generalize.
+
+The more you tell it, the more you can *check* its work, and the more its answers reflect your choices.
 
 ## Choosing a method
 
@@ -25,11 +36,39 @@ Start from the question, not the technique.
 
 ## Five habits that carried through the book
 
-1. **Decide what a document is.** Every result depends on it.
-2. **Write your cleaning rules down.** Stop words, placeholder answers, and vocabulary cutoffs are analytic choices.
-3. **Read the data.** Before a method, to know what you are dealing with. After a method, to check what it found.
+1. **Decide what a document is.** Every result depends on it. One answer, one student, and one question give different results.
+2. **Write your cleaning rules down.** Stop words, placeholder answers, and vocabulary cutoffs are analytic choices. Someone should be able to see and change them.
+3. **Read the data.** Before a method, to know what you are dealing with. After a method, to check what it found. Every chapter had a step where we went back to the original answers.
 4. **Distrust small groups.** Intervals are wide, and rare words get inflated scores.
 5. **Separate "the method found it" from "it is true."** A topic is a pattern in word use. Whether it is a meaningful theme is a judgment.
+
+## Describing what you did
+
+When you write up a text-mining analysis, readers cannot judge it unless they know the choices you made. A good methods paragraph covers the same things we decided along the way. Here is a template with the blanks filled in for an imagined analysis of these data.
+
+> We analyzed *N* answers from *M* students to three open-ended questions. Placeholder answers (e.g., "none," "n/a") were removed (*k* answers). Text was split into words, lowercased, and stripped of punctuation and numbers; we removed the Snowball stop-word list plus *[list your domain stop words]*. For topic modeling we combined each student's answers into one document and retained words used by at least five students. We fit an LDA model with *K* topics (seed 664) and chose *K* by *[how you chose it]*. Two researchers independently named each topic from its highest-probability words and its five strongest documents; *[how disagreements were resolved]*. Analyses used R *[version]* with the tidytext and topicmodels packages.
+
+The pieces to always include:
+
+| Report this | Why |
+|---|---|
+| How many documents, and what a "document" was | It shapes every result |
+| Cleaning rules (stop words, removals) | They change which words matter |
+| Settings (K, thresholds, seed, vocabulary cutoff) | So someone can reproduce your result |
+| How topics were named and checked | Naming is a human judgment, not an output |
+| For supervised models, the held-out performance, not the training performance | Training performance is always flattering |
+| What the method *cannot* tell you | For example, that a topic is a pattern in words, not a verified theme |
+
+## A checklist before you trust a result
+
+- [ ] Did I read a random sample of the raw text?
+- [ ] Do I know what a document is in this analysis?
+- [ ] Did I look at what my cleaning rules removed?
+- [ ] For a group comparison: how big are the groups, and are the differences larger than their error bars?
+- [ ] For topics: did I read the strongest documents for each, and would the topics survive a different seed or a different K?
+- [ ] For a classifier: was it tested on data it never saw, split by student?
+- [ ] For sentiment: did I check which words drive the score, and compare within a question?
+- [ ] Could someone else reproduce this from what I wrote down?
 
 ## Working with student words
 
@@ -41,8 +80,11 @@ The book's data are synthetic, but the real VCU CARES responses are students des
 
 ## Where to go next
 
-- **Embeddings.** Instead of counting words, represent each answer as a vector that captures meaning, so "advisor" and "counselor" land near each other. This addresses many of the vocabulary limits we hit.
-- **Large language models for coding.** An LLM can apply a codebook to thousands of answers. Everything from Chapter 7 still applies: hold out human-coded answers and measure agreement before trusting it.
+- **Embeddings.** Instead of counting words, represent each answer as a list of numbers (a *vector*) that captures meaning, so "advisor" and "counselor" land near each other. This addresses many of the vocabulary limits we hit.
+- **Large language models for coding.** An LLM can apply a codebook to thousands of answers. Everything from @sec-supervised still applies: hold out human-coded answers and measure agreement before trusting it.
 - **Inter-rater reliability.** If two humans code the same answers, how often do they agree? That sets the ceiling for any classifier.
+- **More reading.** The references list two free online books, *Text Mining with R* and *Supervised Machine Learning for Text Analysis in R*, that go deeper on everything here.
 
 The best next step is a project of your own. Bring a dataset to lab, decide what a document is, and start by reading.
+
+If a term in this book was unfamiliar, @sec-glossary collects the key ones in one place, and @sec-r-primer explains how to read the R code.

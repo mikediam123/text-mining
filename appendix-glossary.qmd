@@ -1,0 +1,115 @@
+# Glossary {#sec-glossary}
+
+Plain-language definitions of the terms used in this book, in alphabetical order. Where a term is explained in a chapter, the chapter is noted.
+
+**Accuracy.** The share of all predictions that were correct. Misleading when one answer is much more common than the other, because "always guess the common one" scores well (@sec-supervised).
+
+**Alpha (in LDA).** A setting that controls how mixed each document's topics are. Small values push each document toward one or two topics (@sec-lda).
+
+**Anti-join.** A way of combining two tables that keeps only the rows of the first table that have *no* match in the second. We use it to remove stop words (@sec-tokens).
+
+**AUC (area under the curve).** A threshold-free score for how well a model ranks "yes" cases above "no" cases. 0.5 is guessing and 1.0 is perfect (@sec-supervised).
+
+**Beta (in topic models).** For each topic, the probability of each word. The words with the highest beta define what the topic is about (@sec-lda).
+
+**Bigram.** A pair of neighboring words, such as "financial aid." A trigram has three words, and in general an *n-gram* has *n* (@sec-tokens).
+
+**Coefficient.** A number that says how strongly something pushes a prediction. In a regression, it is the estimated difference in the outcome. In the lasso, most coefficients are zero, and the nonzero ones identify the important words (@sec-stm, @sec-supervised).
+
+**Confidence interval.** A range of values that plausibly contains the true quantity. We draw 95% intervals as error bars: the average plus or minus 1.96 standard errors (@sec-sentiment).
+
+**Confusion matrix.** A 2×2 table counting a classifier's hits, misses, false alarms, and correct rejections (@sec-supervised).
+
+**Covariate.** A characteristic of a document or person that you want to relate to the outcome, such as a student's level (@sec-stm).
+
+**Cross-validation.** Estimating how well a model will do on new data by repeatedly training on part of the training data and testing on the rest. `cv.glmnet()` uses it to pick the penalty strength (@sec-supervised).
+
+**Data frame / tibble.** A table where each row is an observation and each column is a variable. A tibble is the tidyverse's version (@sec-r-primer).
+
+**Data leakage.** Information from the test data accidentally influencing the model, which makes test results look better than they would be on genuinely new data (@sec-supervised).
+
+**Document.** Whatever unit of text you decide to treat as one piece: an answer, a student, a question. Your choice shapes every result (@sec-data).
+
+**Document-term matrix.** A grid with one row per document and one column per word, with word counts in the cells (@sec-lda).
+
+**F1.** A single score that balances precision and recall. It is low whenever either one is low (@sec-supervised).
+
+**Factor.** A column with a fixed set of allowed categories in a stated order (@sec-data, @sec-stm).
+
+**FREX.** A way of ranking a topic's words by how both *frequent* and *exclusive* to the topic they are. Useful for naming topics (@sec-stm).
+
+**Function.** A named recipe: you give it inputs (arguments) and it returns a result (@sec-r-primer).
+
+**Gamma (in topic models).** For each document, how much of it belongs to each topic. A document's gammas sum to 1 (@sec-lda).
+
+**IDF (inverse document frequency).** A rarity score for a word: high when the word appears in few documents, zero when it appears in all of them (@sec-tfidf).
+
+**K.** The number of topics a topic model is asked to find. You choose it (@sec-lda).
+
+**Label noise.** Errors or disagreement in the human-assigned labels that a supervised model learns from. It limits how well any model can do (@sec-supervised).
+
+**Lasso.** A regularized regression that shrinks most coefficients all the way to zero, leaving a short list of important words (@sec-supervised).
+
+**LDA (Latent Dirichlet Allocation).** The most common topic model. It describes each document as a mix of topics and each topic as a list of words (@sec-lda).
+
+**Lexicon.** A word list with labels attached, such as which words are positive or negative, or which words are stop words (@sec-tokens, @sec-sentiment).
+
+**Lift.** How many times more common something is in one group than overall. 1 means no difference; 2 means twice as common (@sec-lda).
+
+**Log-likelihood.** A score for how well a model fits the data. Higher is better, but it always improves as you add topics, so it cannot choose K by itself (@sec-lda).
+
+**Lambda.** The strength of the penalty in a regularized regression. Chosen by cross-validation (@sec-supervised).
+
+**Median.** The middle value: half the values are smaller and half larger. Less affected by extreme values than the mean (@sec-data).
+
+**Multi-label.** A prediction problem where each item can have several labels at once, such as an answer coded with more than one topic (@sec-supervised).
+
+**Negation.** Words like "not" and "never" that flip a meaning. Simple lexicon methods cannot see them (@sec-sentiment).
+
+**Overfitting.** A model that learns the quirks of its training data so well that it does poorly on new data (@sec-supervised).
+
+**Perplexity.** A measure of how well a topic model predicts documents it has not seen. Lower is better (@sec-lda).
+
+**Pipe (`|>`).** R's "and then" symbol. It passes what is on its left into the function on its right (@sec-r-primer).
+
+**Precision.** Of the cases a model flags as "yes," the share that really are. "When it says yes, can I trust it?" (@sec-supervised).
+
+**Prevalence (in STM).** How much of the text belongs to a topic. STM lets prevalence depend on covariates (@sec-stm).
+
+**Recall.** Of the cases that really are "yes," the share the model found. "How many did it catch?" (@sec-supervised).
+
+**Regression.** A method for estimating how an outcome changes with something else. The result is a coefficient (@sec-stm).
+
+**Regularization.** Adding a penalty on the size of a model's coefficients so it does not overfit (@sec-supervised).
+
+**Regular expression (regex).** A compact pattern language for searching text, such as `^\\d+$` for "only digits" (@sec-r-primer).
+
+**Seed.** The starting point of R's random number generator. Setting it makes random steps reproducible (@sec-r-primer).
+
+**Sentiment.** How positive or negative language is (@sec-sentiment).
+
+**Sparse matrix.** A grid that is mostly zeros, stored compactly by recording only the non-zero cells (@sec-lda, @sec-supervised).
+
+**Standard error.** A measure of how uncertain an estimate (such as an average) is. Shrinks as the group gets larger (@sec-sentiment).
+
+**STM (structural topic model).** A topic model that lets topic prevalence depend on document characteristics (@sec-stm).
+
+**Stemming / lemmatizing.** Reducing words to a root or dictionary form, so "advisor," "advisors," and "advising" count as one (@sec-tokens).
+
+**Stop words.** Very common function words ("the," "and," "of") removed before counting (@sec-tokens).
+
+**Supervised learning.** Training a model on examples with known answers, then testing it on examples it has not seen (@sec-supervised).
+
+**TF (term frequency).** How common a word is within a document (@sec-tfidf).
+
+**TF-IDF.** TF multiplied by IDF. High for words that are frequent in one document and rare in the others (@sec-tfidf).
+
+**Threshold.** The cutoff probability above which a model's prediction becomes "yes." Changing it trades precision against recall (@sec-supervised).
+
+**Token.** The unit of text you count, usually a word (@sec-tokens).
+
+**Topic.** In a topic model, a list of words that tend to appear together. A topic is not a label; you name it yourself by reading its words (@sec-lda).
+
+**Unsupervised learning.** Finding patterns in data without an answer key (@sec-lda).
+
+**Vocabulary.** The set of distinct words a model works with, often after dropping very rare ones (@sec-lda, @sec-supervised).

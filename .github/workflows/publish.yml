@@ -59,6 +59,23 @@ jobs:
       - name: Render the book
         run: quarto render
 
+      # Manual runs only: print the rendered text of the topic-model chapters into the
+      # log so their output can be reviewed without downloading the site.
+      - name: Print rendered topic-model chapters (manual runs only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python3 - <<'PY'
+          import re, html
+          for f in ["docs/04-topic-lda.html", "docs/05-topic-stm.html"]:
+              t = open(f, encoding="utf-8").read()
+              m = re.search(r"<main.*?</main>", t, re.S).group(0)
+              m = re.sub(r"<style.*?</style>|<script.*?</script>|<svg.*?</svg>|<img[^>]*>", "", m, flags=re.S)
+              m = re.sub(r"<br ?/?>|</p>|</tr>|</pre>|</h\d>", "\n", m)
+              m = html.unescape(re.sub(r"<[^>]+>", "", m))
+              print("=" * 30, f, "=" * 30)
+              print(re.sub(r"\n\s*\n+", "\n", m))
+          PY
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs

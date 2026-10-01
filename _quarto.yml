@@ -39,6 +39,9 @@ book:
         - 07-supervised.qmd
     - 08-wrapping-up.qmd
     - references.qmd
+  appendices:
+    - appendix-r-primer.qmd
+    - appendix-glossary.qmd
 
 format:
   html:

@@ -1,0 +1,212 @@
+# Reading R Code: A Short Guide {#sec-r-primer}
+
+You do not need to be a programmer to follow this book. You do need to be able to *read* the code, so you know what each block is doing before you run it. This appendix covers the handful of ideas that appear on almost every page. If a chapter's code looks like a wall of symbols, come back here.
+
+## Running code
+
+R code lives in two places in this book.
+
+- **Code blocks in a chapter** (the gray boxes). You can copy any of them with the copy icon in the corner.
+- **Files in the project**, such as `R/helpers.R`, which chapters load with `source()`.
+
+In RStudio, put the cursor on a line and press **Ctrl+Enter** (Cmd+Enter on a Mac) to run that line. Select several lines first to run them all. Output appears in the **Console** (text) or the **Plots** pane (charts). If you open a chapter (`.qmd` file), each gray block has a small green "play" button that runs the whole block.
+
+Run blocks **in order, from the top of the chapter**. Later blocks use things that earlier blocks created, so skipping ahead is the most common reason for an error such as `object 'vcu' not found`.
+
+## Comments
+
+Anything after a `#` on a line is a comment: a note to the human reader that R ignores.
+
+```{r}
+#| eval: false
+
+# This whole line is a comment
+x <- 5   # and so is everything after the # on this line
+```
+
+Throughout the book we put short comments inside code to explain what a line is for.
+
+## Objects and the arrow
+
+R stores things under names. The arrow `<-` means "take what is on the right and save it under the name on the left."
+
+```{r}
+#| eval: false
+
+n_students <- 1241        # saves the number 1241 as n_students
+greeting   <- "hello"     # saves a piece of text
+```
+
+Read `<-` aloud as "gets." The thing you saved is called an **object**. Type its name on its own line to see what is inside it. Names are case-sensitive: `vcu` and `VCU` are different objects.
+
+## Text, numbers, and TRUE/FALSE
+
+- **Text** (called a *string* or *character* value) goes in quotes: `"hello"`. Single or double quotes both work.
+- **Numbers** have no quotes: `5`, `3.14`.
+- **Logical values** are `TRUE` or `FALSE`. They come from questions you ask of the data, such as `n_words <= 3`, which is `TRUE` for short answers and `FALSE` for the rest.
+
+The comparison symbols you will see are:
+
+| Symbol | Means |
+|---|---|
+| `==` | is equal to (two equals signs; one `=` is something else) |
+| `!=` | is not equal to |
+| `<`, `<=`, `>`, `>=` | less than, at most, greater than, at least |
+| `!` | not (flips `TRUE` and `FALSE`) |
+| `&` | and |
+| `\|` | or |
+| `%in%` | is one of the values in this list |
+
+## Functions and their arguments
+
+A **function** is a named recipe: you hand it ingredients and it hands back a result. You call it by writing its name followed by parentheses. The ingredients inside the parentheses are called **arguments**.
+
+```{r}
+#| eval: false
+
+round(3.14159, digits = 2)
+```
+
+Here `round` is the function. `3.14159` is the first argument (the number to round). `digits = 2` is a *named* argument: it says "keep two decimal places." The answer is `3.14`.
+
+Two things to notice:
+
+1. Some arguments are written with a name (`digits = 2`) and some without. If you leave out the name, R assumes the arguments are in the order the function expects. Named arguments are clearer, so we use them whenever the meaning would not be obvious.
+2. Most functions have **options** you can change by adding named arguments. When this book says "an option," it means exactly this. To see all the options of any function, type `?round` in the Console, which opens its help page.
+
+Functions can be nested, with one inside another. R works from the inside out: in `round(mean(x), 2)`, it first computes `mean(x)` and then rounds that.
+
+## Packages
+
+R comes with basic tools, and **packages** add more. You install a package once with `install.packages("name")`, and then load it in every new session with `library(name)`.
+
+```{r}
+#| eval: false
+
+install.packages("tidytext")   # once per computer
+library(tidytext)              # once per R session
+```
+
+Chapters begin by loading the packages they need. If you see `could not find function "unnest_tokens"`, it almost always means the package that contains it (here, `tidytext`) has not been loaded with `library()`.
+
+You can also name the package directly with `::`, as in `stats::sd(x)`. That is useful when two packages contain functions with the same name.
+
+## Data frames
+
+Most of what we analyze is stored in a **data frame**: a table where each **row** is one observation and each **column** is one variable. This book uses a modern version called a *tibble*, which prints more tidily.
+
+In our data, each row is one answer, and the columns include `text` (what the student said), `question` (which question it answers), and `level` (undergraduate or graduate).
+
+```{r}
+#| eval: false
+
+vcu$text          # the text column, as a list of values
+nrow(vcu)         # how many rows
+ncol(vcu)         # how many columns
+```
+
+The `$` picks out one column by name.
+
+## The pipe: `|>`
+
+The pipe is the symbol you will see most. It means "take what is on my left and use it as the first ingredient of the function on my right." It lets you write a series of steps in the order you would say them.
+
+Without the pipe, steps nest inside each other and you read from the inside out:
+
+```{r}
+#| eval: false
+
+head(arrange(filter(vcu, level == "Graduate"), question), 5)
+```
+
+With the pipe, you read from top to bottom, the way you would describe it in words:
+
+```{r}
+#| eval: false
+
+vcu |>
+  filter(level == "Graduate") |>   # keep only graduate students
+  arrange(question) |>             # sort by question
+  head(5)                          # show the first five rows
+```
+
+Read `|>` as "and then." Both versions do exactly the same thing. Starting a new line after each `|>` is just a layout habit that makes the steps easy to follow. (You will sometimes see `%>%` in other people's code. It does the same job.)
+
+## The verbs we use all the time
+
+Most of the data manipulation in this book uses a small family of functions from the `dplyr` package, part of the `tidyverse`. Each does one thing and is named for it.
+
+| Function | What it does | Example |
+|---|---|---|
+| `filter()` | Keep only rows that meet a condition | `filter(level == "Graduate")` |
+| `select()` | Keep only certain columns | `select(question, text)` |
+| `mutate()` | Add or change a column | `mutate(n_words = str_count(text, "\\S+"))` |
+| `count()` | Count rows, optionally by group | `count(question)` |
+| `arrange()` | Sort rows | `arrange(desc(n))` (`desc` = largest first) |
+| `group_by()` | Do the next steps separately for each group | `group_by(question)` |
+| `summarise()` | Collapse each group to one row of summary numbers | `summarise(mean = mean(net))` |
+| `slice_max()` | Keep the rows with the largest values | `slice_max(n, n = 10)` |
+
+Three habits will make code easier to read:
+
+- `group_by()` stays switched on until you call `ungroup()`. We often add `ungroup()` after a grouped summary so that later steps are not accidentally done group by group.
+- `n = 10` inside `slice_max()` means "ten rows." A bare `n` elsewhere (as in `count()` output) is a column holding counts. The same letter means different things in different places, and context tells you which.
+- `desc()` flips a sort from smallest-first to largest-first.
+
+## Patterns in text: regular expressions
+
+When we search text, we often need a *pattern* instead of a fixed word. A pattern language called **regular expressions** (or "regex") does this. You do not need to learn it. You only need to recognize the few pieces this book uses.
+
+| Piece | Means | Example |
+|---|---|---|
+| `\\S+` | one or more non-space characters, i.e. a "word" | `str_count(text, "\\S+")` counts words |
+| `^` | the start of the text | `"^none"` matches text beginning with "none" |
+| `$` | the end of the text | `"none$"` matches text ending in "none" |
+| `\|` | or | `"none\|nothing"` matches either |
+| `?` | the previous character is optional | `"n/?a"` matches "na" and "n/a" |
+| `\\d+` | one or more digits | `"^\\d+$"` matches a text that is only a number |
+| `.` | any one character | |
+| `[ab]` | either "a" or "b" | |
+
+In R you have to write a backslash twice (`\\`), because R treats a single backslash as a special signal. So `\\S+` is the pattern `\S+`. The block that defines our placeholder pattern in `R/helpers.R` is long but is built from just these pieces.
+
+## Randomness and `set.seed()`
+
+Some methods use random numbers: splitting data into a training and a test set, picking a random sample, or starting a topic model from a random guess. A computer's "random" numbers are generated by a formula, and `set.seed()` fixes where the formula starts.
+
+```{r}
+#| eval: false
+
+set.seed(664)       # any whole number works; 664 is just our choice
+sample(1:10, 3)     # three random numbers from 1 to 10
+```
+
+If you run this block twice with the same seed, you get the same three numbers every time. That is why the book sets seeds before anything random: so that your results match the book's and match each other when you re-run them. Change the seed and you get different (equally valid) random draws.
+
+## Chunk options in Quarto
+
+The gray code blocks in a chapter can begin with lines starting `#|`. These are instructions to Quarto, not to R.
+
+| Option | Means |
+|---|---|
+| `#| label: fig-length` | A name for the block. Names beginning `fig-` make a numbered figure that the text can refer to |
+| `#| fig-cap: "..."` | The caption under a figure |
+| `#| fig-height: 6` | The height of the figure, in inches |
+| `#| eval: false` | Show the code but do not run it |
+| `#| message: false` | Hide the status messages some packages print |
+
+## Common errors, and what they usually mean
+
+| Message | Usual cause |
+|---|---|
+| `could not find function "x"` | The package that contains `x` is not loaded. Run its `library()` line |
+| `object 'vcu' not found` | The block that creates `vcu` has not been run yet, or you restarted R. Run the chapter from the top |
+| `there is no package called 'x'` | Install it with `install.packages("x")` |
+| `Can't find data/vcu_cares_long.csv` | You have not built the data file, or R is not working from the project folder. See `SETUP.md` |
+| `unexpected symbol` or `unexpected ')'` | A typo: a missing comma, a missing closing bracket, or an extra one |
+
+Two general tips. First, **read the first line of an error message**, since it often names the problem. Second, **look at the line just above the one R complains about**, since a missing bracket is usually reported on the line after the real mistake.
+
+## Where R is "looking"
+
+R reads and writes files relative to its **working directory**. The easiest way to be sure it is in the right place is to open the project by double-clicking `TextMining.Rproj`; RStudio then sets the working directory to the project folder. You can check with `getwd()` in the Console, and the answer should end in `text-mining`.

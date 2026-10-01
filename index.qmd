@@ -31,6 +31,18 @@ Each chapter builds on the last, so I'd read them in order the first time.
 
 ## How to use this book
 
+This book is written for people who are **not** already strong in statistics or programming. Each chapter explains the idea in plain language first, then shows the code, then walks through what each line does. If a term is unfamiliar, @sec-glossary defines it. If the R code looks unfamiliar, @sec-r-primer is a short guide to reading it.
+
+You will see a few kinds of boxes in the margins of the text:
+
+| Box | What it contains |
+|---|---|
+| **Note** (blue) | Extra background or a list of options worth knowing |
+| **Tip** (green) | A habit or shortcut that will save you trouble |
+| **Warning** (orange) | A common way to go wrong |
+| **Important** (red) | Something that changes how you should read the results |
+
+
 Each chapter follows the same shape. We state a question, run the code that answers it, and then read the output critically. Code appears in gray blocks, and you can copy any block by hovering over it and clicking the copy icon.
 
 Work through a chapter with RStudio open next to your browser and run each block as you go. Text mining in particular rewards poking around: change a stop-word list, change the number of topics, and watch what moves.

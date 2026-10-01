@@ -2,11 +2,17 @@
 
 **Data for this chapter:** `data/vcu_cares_long.csv`, built by `R/01-prep-data.R`
 
-Before any text mining, we need to know what we are mining. This chapter covers where the VCU CARES answers came from, how they are organized, and the cleaning decisions that every later chapter inherits.
+Before any text mining, we need to know what we are mining. This chapter covers where the VCU CARES answers came from, how they are organized, and the cleaning decisions that every later chapter inherits. It is also where we meet the R code that the rest of the book builds on, so we go slowly.
+
+::: callout-tip
+## New to R?
+
+If the code in this chapter looks unfamiliar, read @sec-r-primer first. It is a short guide to the handful of ideas (objects, functions, the pipe `|>`) that appear on almost every page. You can also come back to it any time a line of code puzzles you.
+:::
 
 ## Where the data come from
 
-Interviewers asked VCU students three open-ended questions:
+Interviewers asked VCU students three open-ended questions. "Open-ended" means students answered in their own words rather than picking from a list.
 
 1. What has VCU done really well that has helped you and other students? (we call these **strengths**)
 2. What is the biggest concern you have regarding how VCU supports students? (**concerns**)
@@ -18,7 +24,7 @@ Interviewers asked VCU students three open-ended questions:
 Everything below describes the structure of the real study. The text you will see in this book was generated to match that structure: same sheets, same columns, same row counts, similar answer lengths, and topic codes ticked at the real rates. It contains no real student responses. See `sample-data/README.md` for how it was made and what it can and cannot be used for.
 :::
 
-The answers were collected in three batches, which arrive as three sheets in the original Excel workbook. The first and largest batch also has something the others lack: for the strength and concern questions, the interviewer ticked which topics the answer touched on, such as Advising, Dining, or Safety. Those hand-assigned codes become the answer key for the supervised learning in @sec-supervised.
+The answers were collected in three batches, which arrive as three sheets in the original Excel workbook. The first and largest batch also has something the others lack: for the strength and concern questions, the interviewer ticked which **topics** the answer touched on, such as Advising, Dining, or Safety. These hand-assigned topic codes become the "answer key" for the supervised learning in @sec-supervised.
 
 ## Load the helpers and the data
 
@@ -32,7 +38,18 @@ vcu_raw <- load_vcu(clean = FALSE)
 glimpse(vcu_raw)
 ```
 
-The raw workbook is wide: one row per student, with a column for each question and another for each topic checkbox. Text-mining tools want the opposite. `R/01-prep-data.R` stacked the three sheets into a **long** table with one row per *answer*, so each row has:
+Here is what each piece of that block does.
+
+- `source("R/helpers.R")` runs a file of our own code. That file does three things for us: it loads the `tidyverse` packages (a bundle of tools for working with data and drawing charts), it sets a consistent chart style and color palette, and it defines the function `load_vcu()`. Putting these in one shared file means every chapter starts from the same place.
+- `load_vcu(clean = FALSE)` reads the data file. The option `clean = FALSE` means "give me everything, including the empty answers." Later we will switch it back to the default, `clean = TRUE`, which removes them.
+- `vcu_raw <- ...` saves the result under the name `vcu_raw`. The "raw" is a reminder that this version has not been cleaned yet.
+- `glimpse()` prints a compact summary of a table: one line per column, showing the column's name, its type, and its first few values. It is the quickest way to see what you have.
+
+In the output, `<chr>` means a column of text ("character"), `<dbl>` a number, `<int>` a whole number, and `<fct>` a *factor*: a column with a fixed set of allowed values, such as our three questions.
+
+### Why the data are "long"
+
+The raw workbook is **wide**: one row per student, with a column for each question and another for each topic checkbox. Text-mining tools want the opposite. `R/01-prep-data.R` stacked the three sheets into a **long** table with one row per *answer*. A student who answered all three questions now has three rows. Each row has:
 
 - `doc_id`: a unique ID for the answer
 - `resp_id`: which student gave it (a student can have up to three answers)
@@ -50,6 +67,8 @@ The workbook also holds major, GPA, gender, and race or ethnicity for some stude
 
 ## Who answered, and what?
 
+The first thing to do with any new dataset is count things.
+
 ```{r}
 #| label: tbl-counts
 
@@ -57,6 +76,14 @@ vcu_raw |>
   count(source, question) |>
   pivot_wider(names_from = question, values_from = n)
 ```
+
+Reading this block from top to bottom, as a series of steps joined by `|>` ("and then"):
+
+1. Start with `vcu_raw`.
+2. `count(source, question)` counts how many rows there are for each *combination* of source and question. The result has one row per combination and a new column `n` holding the count.
+3. `pivot_wider(names_from = question, values_from = n)` reshapes that result so that each question becomes its own column. `names_from` says which column supplies the new column names; `values_from` says which column supplies the numbers that go in them. It turns a tall list of counts into a small table that is easier to read.
+
+The original form has about 1,000 answers per question. The two event-based sheets add a few hundred more. Not everyone answered every question, so the columns differ slightly.
 
 ```{r}
 #| label: tbl-level
@@ -67,9 +94,17 @@ vcu_raw |>
   mutate(pct = round(100 * n / sum(n), 1))
 ```
 
-Undergraduates dominate, and a small number of students have no level recorded. We will keep both facts in mind: a "common" word is common among undergraduates, because they are most of the data.
+This counts **students**, not answers.
+
+- `distinct(resp_id, level)` keeps one row per unique student. (Without it, a student with three answers would be counted three times.)
+- `count(level)` then counts students at each level.
+- `mutate(pct = ...)` adds a new column `pct`. Inside it, `n / sum(n)` is each count divided by the total, which gives a proportion; multiplying by 100 makes it a percentage; and `round(..., 1)` keeps one decimal place.
+
+Undergraduates dominate, and a small number of students have no level recorded (shown as `NA`, which is R's symbol for "missing"). We will keep both facts in mind: a "common" word is common among undergraduates, because they are most of the data.
 
 ## How long are the answers?
+
+Short answers give a method very little to work with, so it is worth measuring length early.
 
 ```{r}
 #| label: fig-length
@@ -85,6 +120,17 @@ ggplot(vcu_raw, aes(n_words)) +
 
 summary(vcu_raw$n_words)
 ```
+
+**The counting step.** `str_count(text, "\\S+")` counts how many times a pattern appears in each answer. The pattern `\\S+` means "a run of characters that are not spaces," which is a reasonable definition of a word. So this line adds a column, `n_words`, with the number of words in every answer. (See @sec-r-primer for more on patterns.)
+
+**The chart.** Charts in R are built in layers with the `ggplot2` package, and each layer is added with a `+`.
+
+- `ggplot(vcu_raw, aes(n_words))` starts a chart using our data. `aes()` is short for *aesthetics*: it says which column is mapped to which part of the chart. Here `n_words` goes on the horizontal axis.
+- `geom_histogram(binwidth = 5, boundary = 0)` draws a **histogram**, a bar chart that groups numbers into ranges ("bins") and shows how many values fall in each. `binwidth = 5` makes each bar cover five words; `boundary = 0` makes the first bar start at zero.
+- `coord_cartesian(xlim = c(0, 100))` zooms the horizontal axis to 0–100 words. A few very long answers would otherwise stretch the chart and squash everything else. (`c(0, 100)` is how R writes a list of values: "combine 0 and 100.")
+- `labs(x = ..., y = ...)` sets the axis labels.
+
+**The numbers.** `summary()` prints six numbers: the smallest and largest values, the **median** (the middle value, so half the answers are shorter), the **mean** (the average), and the 1st and 3rd **quartiles** (the values a quarter and three-quarters of the way up the sorted list). The median is the better description here, because a few very long answers pull the mean upward.
 
 The median answer is about a dozen words. That is short, and it will matter repeatedly: with so few words per answer, any single answer gives a method very little to work with. Topic models in particular struggle here, which is why @sec-lda combines a student's answers before modeling.
 
@@ -102,9 +148,16 @@ vcu_raw |>
   head(15)
 ```
 
+Step by step:
+
+- `filter(n_words <= 3)` keeps only answers of three words or fewer.
+- `str_squish(text)` trims spaces from the ends and collapses any run of spaces into one. `str_to_lower()` converts to lowercase. Doing both means "None", "none " and "NONE" all count as the same thing.
+- `count(text, sort = TRUE)` counts how many times each distinct text appears, with the most common first. (`sort = TRUE` is the option that orders by count.)
+- `head(15)` shows only the top fifteen rows.
+
 "None," "n/a," and "nothing" are the interviewer's or the student's way of skipping the question. Left in, they would show up as some of the most frequent "words" in the whole dataset and tell us nothing about student experience.
 
-The pattern in `R/helpers.R` names these placeholders. Here is how many answers it catches, and what a handful of the removed ones look like:
+The helper file contains a **pattern** that matches these placeholder answers (it is called `placeholder_pattern`). It is a list of phrases joined by `|`, meaning "or." Here is how many answers it catches, and what a handful of the removed ones look like:
 
 ```{r}
 #| label: tbl-placeholders
@@ -116,6 +169,12 @@ vcu_raw |> count(is_placeholder) |> mutate(pct = round(100 * n / sum(n), 1))
 
 vcu_raw |> filter(is_placeholder) |> slice_sample(n = 8, replace = FALSE) |> select(question, text)
 ```
+
+- `str_detect(x, pattern)` asks, for every answer, "does this text match the pattern?" and returns `TRUE` or `FALSE`. We save that answer in a new column, `is_placeholder`.
+- The second line counts how many answers are `TRUE` versus `FALSE` and what percentage that is.
+- The third line looks at a few of the placeholders to make sure the rule is catching what we intend. `slice_sample(n = 8)` picks eight rows at random, and `select(question, text)` keeps just those two columns for display.
+
+That last line is a habit worth copying: **after writing any cleaning rule, look at what it removed.** A rule that is too loose throws away real answers; one that is too tight leaves junk behind.
 
 ::: callout-warning
 ## Every cleaning rule is a decision
@@ -132,9 +191,13 @@ vcu <- load_vcu()
 nrow(vcu_raw); nrow(vcu)
 ```
 
+`load_vcu()` with no options uses its default, `clean = TRUE`, which drops the placeholder answers. `nrow()` reports how many rows a table has, so these two numbers are the answer count before and after cleaning. Every later chapter starts with `vcu <- load_vcu()`.
+
+The helper does one more cleaning step quietly: it converts "curly" apostrophes (the kind word processors produce) to straight ones. Without that, the word "don’t" would not match the stop-word entry "don't", and function words would leak into our counts. It is a good example of a cleaning problem that is invisible until you go looking for it.
+
 ## What counts as a document?
 
-Text-mining methods compare "documents," and you get to decide what a document is. That choice shapes every result:
+Text-mining methods compare "documents," and *you* decide what a document is. That choice shapes every result.
 
 | Document is... | Good for | Cost |
 |---|---|---|
@@ -160,4 +223,18 @@ vcu |>
   select(question, level, text)
 ```
 
+- `set.seed(664)` fixes the random starting point (see @sec-r-primer), so you will see the same twelve answers the book shows.
+- `group_by(question)` tells R to treat each question separately for the next step.
+- `slice_sample(n = 4)` then picks four answers at random *from each question*, because the table is grouped.
+- `ungroup()` switches the grouping off, so later steps are not affected.
+- `select()` keeps three columns for display.
+
 Notice how different the three questions sound. Strengths praise things. Concerns describe problems. Ideas are imperative ("more," "improve," "add"). Whatever the methods in the next chapters find, they will be finding differences like these, and your reading is how you will check them.
+
+## Summary
+
+- The data are in **long format**: one row per answer, with the student, question, and topic codes attached.
+- Look at structure, counts, and length before doing anything else.
+- Cleaning rules are decisions. Write them down and look at what they remove.
+- A **document** is whatever unit you choose to compare; the choice shapes every result.
+- Read a random sample of the raw text, and keep doing so.

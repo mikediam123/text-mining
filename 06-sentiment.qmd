@@ -2,7 +2,9 @@
 
 **Data for this chapter:** `data/vcu_cares_long.csv`
 
-Sentiment analysis asks how positive or negative the language is. The simplest version is **lexicon-based**: take a dictionary that labels words as positive or negative, count them, and net them out per document. That is what we do here. It is transparent, it needs no training data, and it fails in instructive ways.
+Sentiment analysis asks how **positive or negative** the language is. The simplest version is **lexicon-based**: take a dictionary that labels words as positive or negative, count the positive and negative words in each answer, and subtract. That is what we do here. It is transparent, it needs no training data, and it fails in instructive ways.
+
+By the end of this chapter you will be able to score text with a sentiment lexicon, compare scores across groups, and, most importantly, check whether the scores mean what they appear to mean.
 
 ```{r}
 #| label: setup
@@ -15,7 +17,7 @@ vcu <- load_vcu()
 
 ## Sentiment lexicons
 
-A lexicon is a word list with sentiment labels. `tidytext` ships the **Bing** lexicon (Hu & Liu, 2004), which marks about 6,800 words as positive or negative.
+A **lexicon** is a word list with labels attached. A sentiment lexicon labels each word as positive or negative (or gives it a score). `tidytext` ships the **Bing** lexicon (Hu & Liu, 2004), which marks about 6,800 words as positive or negative.
 
 ```{r}
 #| label: bing
@@ -25,11 +27,21 @@ bing |> count(sentiment)
 head(bing, 8)
 ```
 
-Two other lexicons are common. **AFINN** scores words from -5 to +5, which gives intensity. **NRC** tags words with emotions like trust and fear. Both are available through `get_sentiments()`, but they require the `textdata` package and a one-time download that asks you to accept a license, so we stick with Bing for reproducibility.
+`get_sentiments("bing")` loads the lexicon as a table with two columns: `word` and `sentiment`. The second line counts how many words are labeled positive and how many negative, and `head(bing, 8)` shows the first eight rows. (The Bing lexicon has more negative words than positive ones, a common feature of English that matters when we compare scores.)
+
+Two other lexicons are common.
+
+| Lexicon | What it gives you |
+|---|---|
+| **Bing** | Each word is positive or negative |
+| **AFINN** | Each word has a score from -5 (very negative) to +5 (very positive), so you get *intensity* |
+| **NRC** | Each word is tagged with emotions such as trust, fear, anger, and joy |
+
+AFINN and NRC are available through `get_sentiments()`, but they require the `textdata` package and a one-time download that asks you to accept a license, so we stick with Bing for reproducibility.
 
 ## Scoring each answer
 
-We tokenize, join to the lexicon, and count. Words not in the lexicon simply drop out of the join.
+The steps: split the text into words, **join** the words to the lexicon, and count. Words that are not in the lexicon simply drop out.
 
 ```{r}
 #| label: scores
@@ -53,6 +65,24 @@ summary(vcu_sent$net)
 mean(vcu_sent$net == 0)
 ```
 
+This block does two things: it scores the sentiment words, and then it attaches those scores back to the full list of answers.
+
+**Part 1: build the scores.**
+
+- `unnest_tokens(word, text)` splits each answer into words, as in @sec-tokens. Note that we do *not* remove stop words here: the lexicon ignores words it does not know, and some stop words (like "not") matter for negation.
+- `inner_join(bing, by = "word")` matches each word to the lexicon. An **inner join** keeps only rows that have a match in *both* tables, so every word not in the lexicon disappears, and each remaining word gets a `sentiment` label.
+- `count(doc_id, sentiment)` counts, for each answer, how many positive and how many negative words it has.
+- `pivot_wider(names_from = sentiment, values_from = n, values_fill = 0)` reshapes the table so that `positive` and `negative` are separate columns. `values_fill = 0` writes a zero where an answer has no words of one kind (without it, those cells would be blank).
+- `mutate(net = positive - negative)` creates the **net sentiment score**: positive words minus negative words. An answer with three positive words and one negative has a net score of +2.
+
+**Part 2: attach the scores to all answers.**
+
+- `left_join(scores, by = "doc_id")` adds the score columns to every answer. A **left join** keeps every row of the first table (all of our answers) even if there is no match. Answers that contained no lexicon words have no row in `scores`, so they receive blanks (`NA`).
+- `mutate(across(c(positive, negative, net), \(x) replace_na(x, 0)))` fills those blanks with zeros. `across()` applies the same step to several columns at once, and `replace_na(x, 0)` replaces missing values with 0. The odd-looking `\(x) ...` is a small function written on the spot ("take `x` and replace its blanks with zeros").
+- `n_words = ...` adds each answer's word count, which we use later.
+
+The last two lines summarize the net scores. `summary()` shows the range, median, and mean. `mean(vcu_sent$net == 0)` is a trick worth knowing: `vcu_sent$net == 0` gives `TRUE` or `FALSE` for each answer, and the **mean of a list of TRUEs and FALSEs is the share that are TRUE**, so this reports the fraction of answers that scored exactly zero.
+
 A large share of answers score exactly zero. Many are short, and many contain no word the lexicon knows. A zero here means "no signal," not "neutral."
 
 ## Sentiment by question
@@ -75,6 +105,14 @@ ggplot(by_q, aes(question, mean)) +
   geom_hline(yintercept = 0, linewidth = 0.3) +
   labs(x = NULL, y = "Mean net sentiment (positive minus negative words)")
 ```
+
+**The summary table.** For each question (`group_by(question)`), `summarise()` computes three numbers:
+
+- `mean`: the average net score.
+- `se`: the **standard error**, a measure of how uncertain that average is. It is calculated as the standard deviation (`sd()`, which measures how spread out the scores are) divided by the square root of the number of answers (`sqrt(n())`, where `n()` counts rows in the group). A bigger group gives a smaller standard error: more answers means a more precise average.
+- `n`: how many answers are in the group.
+
+**The chart.** `geom_col()` draws a bar at each question's mean. `geom_errorbar()` adds the whiskers: from `mean - 1.96 * se` to `mean + 1.96 * se`. This range is a **95% confidence interval**, the span of values that plausibly contains the true average. (The number 1.96 comes from the normal distribution; it is the multiple of the standard error that covers 95%.) `geom_hline(yintercept = 0)` draws a thin line at zero for reference.
 
 Strengths score clearly positive, and ideas land in between. Concerns are the surprise: their mean is close to zero (slightly below), not strongly negative. Answers to "what is your biggest concern?" contain nearly as many positive words as negative ones.
 
@@ -104,6 +142,13 @@ vcu_sent |>
   labs(x = NULL, y = "Mean net sentiment", fill = NULL)
 ```
 
+This is the same calculation, now for each *combination* of question and level (`group_by(question, level)`). The chart options are new:
+
+- `fill = level` colors the bars by level.
+- `position = position_dodge(width = 0.8)` places the two bars for each question side by side instead of stacking them. The error bars get the same `position_dodge()` so that they line up with their bars.
+- `scale_fill_manual(values = c(...))` chooses the colors by hand: teal for undergraduates, gold for graduates.
+- `.groups = "drop"` ungroups the result after `summarise()`.
+
 Check whether the intervals for the two levels overlap within each question. Where they do, we cannot say the groups differ, and the gap between the bars is within noise. Resist reading a story into a difference smaller than its error bar.
 
 ## Which words drive the score?
@@ -128,11 +173,13 @@ tokens |>
   labs(x = "Count", y = NULL)
 ```
 
+This joins every word to the lexicon, counts how often each sentiment word appears, keeps the twelve most frequent positive and twelve most frequent negative words, and draws them in two panels. It is the "ingredients list" of our scores.
+
 Read this chart skeptically. Look for words that the lexicon scores one way but that mean something else here. Two words stand out. "Support" is the most common positive word, but in "student support services" it is the name of a program, not an opinion. And "like" also ranks among the top positive words, yet it appears in "doesn't like," where it means the opposite, and in comparisons ("events like the welcome fair"), where it is a preposition. Whenever a topic word or a function word carries a sentiment label, you are measuring the topic, or the grammar, not the feeling.
 
 ## Where lexicons fail: negation
 
-Lexicons count words one at a time, so they cannot see "not good." We can at least measure how often a sentiment word follows a negator.
+Lexicons count words one at a time, so they cannot see "not good." We can at least measure how often a sentiment word follows a **negator** (a word like "not" or "never" that flips the meaning).
 
 ```{r}
 #| label: negation
@@ -153,13 +200,20 @@ nrow(bigram_sent)
 n_matches <- nrow(inner_join(tokens, bing, by = "word"))   # all sentiment-word matches, for scale
 ```
 
+- `negators` is a list we typed by hand of words that flip meaning.
+- The pipeline splits each answer into **bigrams** (pairs of neighboring words, as in @sec-tokens), then splits each pair into a first word `w1` and a second word `w2`.
+- `filter(w1 %in% negators)` keeps pairs where the first word is a negator.
+- `inner_join(bing, by = c("w2" = "word"))` looks up the *second* word of each pair in the lexicon. Because the column is called `w2` in our table but `word` in the lexicon, we tell R how to match them with `c("w2" = "word")`.
+- The result is every case of "negator + sentiment word," such as "not enough." We show the most common ten and count them all with `nrow()`.
+- The last line counts all sentiment-word matches in the data, for scale.
+
 Each of these is a case where Bing assigned the wrong sign. "Not enough" and "not accessible" are the biggest: "enough" and "accessible" are positive in the lexicon, but here they follow "not." "Doesn't like" is the same problem. Out of about `r format(n_matches, big.mark = ",")` sentiment-word matches, `r nrow(bigram_sent)` follow a negator, roughly `r round(100 * nrow(bigram_sent) / n_matches)`%. So negation is not wrecking the averages here, but it would matter much more in longer, more argumentative text.
 
 Note that fixing negation does not solve the concern problem above. Dropping "enough" from the lexicon barely moves the mean for concerns. The bigger issue is that concerns are *worded* with positive vocabulary.
 
 ## Reading the extremes
 
-As always, check the numbers against the text. Here are the most positive and most negative *concerns*:
+As always, check the numbers against the text. Here are the most negative and most positive *concerns*:
 
 ```{r}
 #| label: extremes
@@ -177,13 +231,15 @@ vcu_sent |>
   select(net, text)
 ```
 
+Each block keeps concern answers of at least five words (very short answers are not informative), sorts them by net score, and shows four. `arrange(net)` sorts from lowest to highest, so the first block shows the **most negative** answers; `arrange(desc(net))` sorts from highest to lowest, so the second shows the **most positive** ones.
+
 Read the most positive concerns and you will see that they are complaints worded with "better," "support," and "helpful." Their high scores come from wish-phrasing and negation, not from happiness. This is the kind of result that looks fine in a chart and falls apart when you read it.
 
-Length is a second distortion. Within the concerns, both positive and negative word counts rise with answer length (correlations around .6), so longer answers spread out to the extremes while short ones sit near zero. You could divide by length or use the positive share instead of a raw difference. Neither is clearly right; it depends on whether you think a long complaint is "more negative" than a short one.
+Length is a second distortion. Within the concerns, both positive and negative word counts rise with answer length (correlations around .6), so longer answers spread out to the extremes while short ones sit near zero. (A **correlation** measures how closely two quantities move together, from 0 for unrelated to 1 for perfectly in step.) You could divide by length or use the positive share instead of a raw difference. Neither is clearly right; it depends on whether you think a long complaint is "more negative" than a short one.
 
 ## Summary
 
-- Lexicon sentiment is fast, transparent, and crude.
+- Lexicon sentiment is fast, transparent, and crude. The score is positive words minus negative words.
 - Compare within a question, not across questions that invite different feelings.
-- Always inspect the words driving a score. Topic words carrying sentiment labels bias results.
+- Always inspect the words driving a score. Topic words and function words carrying sentiment labels bias results.
 - Negation, sarcasm, and length all distort scores. The supervised methods in @sec-supervised, or a language model, handle these better, at the cost of transparency.

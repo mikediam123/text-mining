@@ -2,7 +2,9 @@
 
 **Data for this chapter:** `data/vcu_cares_long.csv`
 
-Raw counts favor words that are common everywhere. What we usually want is the opposite: the words that are distinctive of one group of answers compared with the others. **TF-IDF** is the standard way to find them.
+In @sec-tokens we counted words, and the counts told us little: the most frequent words were the ones that show up everywhere. What we usually want is the opposite. We want the words that are **distinctive** of one group of answers compared with the others. **TF-IDF** is the standard way to find them.
+
+By the end of this chapter you will be able to explain what TF-IDF measures, calculate it by hand on a tiny example, use it to compare groups, and recognize its main weakness.
 
 ```{r}
 #| label: setup
@@ -23,31 +25,52 @@ tokens <- vcu |>
   filter(!str_detect(word, "^\\d+$"))
 ```
 
-## The idea
+The setup block repeats the cleaning from the last chapter: load the data, split into words, and remove the standard stop words, our domain stop words, and bare numbers. After it runs, `tokens` is a table with one row per remaining word.
 
-Two quantities, multiplied together.
+## The intuition
 
-**Term frequency (tf)** is how common a word is within a document:
+Imagine you are looking for a book in a library, and the librarian says, "It has the word *the* in it a lot." That is no help: every book does. Now imagine she says, "It mentions *photosynthesis* a lot." That narrows it down at once. The first word is common everywhere; the second is common *here* and rare *elsewhere*.
+
+TF-IDF turns that idea into a number. It combines two pieces.
+
+1. **Term frequency (TF)**: how often a word appears *in this document*. Frequent words in a document are probably important to it.
+2. **Inverse document frequency (IDF)**: how *rare* the word is across all the documents. A word that is in every document tells you nothing, so it gets a low score. A word in only a few documents tells you a lot, so it gets a high score.
+
+Multiply them, and you get a score that is high only when a word is **frequent here and rare elsewhere**.
+
+::: callout-note
+## What is a "document"?
+
+In text mining, a **document** is just whatever unit of text you decide to treat as one piece. It might be one answer, one student's three answers combined, or all the answers to one question stuck together. TF-IDF compares documents against each other, so your choice of document decides what the results mean. We try two choices below.
+:::
+
+## The formulas
+
+If you are comfortable with equations, here they are. If not, the plain-language version after each one is all you need.
+
+**Term frequency** is the share of a document's words that are a given word:
 
 $$
 \text{tf}(t, d) = \frac{n_{t,d}}{\sum_k n_{k,d}}
 $$
 
-the count of word $t$ in document $d$, divided by the total words in $d$.
+In words: the number of times word $t$ appears in document $d$, divided by the total number of words in $d$. If "housing" is 2 of the 3 words in a document, its tf is 2/3, about 0.67.
 
-**Inverse document frequency (idf)** down-weights words that appear in many documents:
+**Inverse document frequency** is a rarity score:
 
 $$
 \text{idf}(t) = \ln\left(\frac{N}{n_t}\right)
 $$
 
-where $N$ is the number of documents and $n_t$ is the number of documents containing $t$. A word in every document has $\ln(1) = 0$, so it contributes nothing. A word in only one document gets the largest idf.
+where $N$ is the total number of documents and $n_t$ is the number of documents containing word $t$. The symbol $\ln$ is the natural logarithm. You do not need to know how logarithms work, only that the result gets bigger as the word gets rarer. A word that is in every document has $N / n_t = 1$, and $\ln(1) = 0$, so its idf is zero. A word in only one of three documents has $\ln(3) \approx 1.10$.
+
+**TF-IDF** is the product:
 
 $$
 \text{tf-idf}(t, d) = \text{tf}(t, d) \times \text{idf}(t)
 $$
 
-High tf-idf means: this word is frequent *here* and rare *elsewhere*. That is exactly "distinctive."
+Because anything multiplied by zero is zero, a word that appears in every document scores zero no matter how often it is used. That is how TF-IDF screens out the "the" words automatically.
 
 ## A tiny example by hand
 
@@ -68,15 +91,21 @@ toy |>
   bind_tf_idf(word, doc, n)
 ```
 
-"Events" appears in all three documents, so its idf is $\ln(3/3) = 0$ and its tf-idf is 0 no matter how often it appears. "Housing" appears only in document A, so it gets $\ln(3/1) \approx 1.10$. Work one row out by hand to convince yourself.
+- `tribble()` is a convenient way to type a small table by hand. The lines beginning with `~` name the columns (`doc` and `word`), and what follows fills the rows two values at a time. So document A contains the words "housing," "housing," and "events."
+- `count(doc, word)` counts how many times each word appears in each document, creating the column `n`.
+- `bind_tf_idf(word, doc, n)` calculates TF, IDF, and TF-IDF and adds them as new columns. It takes three arguments: which column holds the **term** (`word`), which holds the **document** (`doc`), and which holds the **count** (`n`).
 
-## What is a document, here?
+Now check the output against the formulas.
 
-TF-IDF compares documents, so the documents you define decide the answer. We will try two.
+- **"Events"** appears in all three documents, so its idf is $\ln(3/3) = 0$, and its tf-idf is 0 no matter how often it appears. It is the toy version of "the."
+- **"Housing"** appears only in document A, where it is 2 of 3 words (tf ≈ 0.67). It is in 1 of 3 documents, so idf is $\ln(3/1) \approx 1.10$. Its tf-idf is $0.67 \times 1.10 \approx 0.73$.
+- **"Advising"** appears only in document C, where it is 1 of 2 words (tf = 0.5). Its tf-idf is $0.5 \times 1.10 \approx 0.55$.
+
+Work one more row out by hand to convince yourself.
 
 ## Documents = the three questions
 
-If each *question* is one big document, TF-IDF tells us which words are characteristic of strengths versus concerns versus ideas.
+First choice: treat each *question* as one big document. TF-IDF then tells us which words are characteristic of strengths versus concerns versus ideas.
 
 ```{r}
 #| label: fig-tfidf-question
@@ -98,7 +127,11 @@ tfidf_q |>
   labs(x = "tf-idf", y = NULL)
 ```
 
-With only three documents, a word that appears in all three gets idf of zero and vanishes. A word that appears in just one question scores high. The results are real but coarse: with $N = 3$, idf can only take a few values. That is a reason to be careful about tiny document counts.
+**Building the scores.** `count(question, word)` counts each word within each question, and `bind_tf_idf(word, question, n)` scores them, this time with `question` playing the role of the document. There are only three documents, so $N = 3$.
+
+**Drawing the chart.** This is the same recipe as the bar charts in @sec-tokens: keep the ten highest-scoring words in each question (`group_by()` then `slice_max()`), then draw faceted bars with `facet_wrap()`, using `reorder_within()` to sort the words inside each panel.
+
+**Reading the result.** With only three documents, a word that appears in all three gets an idf of zero and vanishes. A word that appears in just one question scores high. The results are real but coarse: with $N = 3$, idf can only take a few values. That is a reason to be careful about tiny document counts.
 
 ## Documents = student level
 
@@ -126,7 +159,11 @@ tfidf_level |>
   labs(x = "tf-idf", y = NULL)
 ```
 
-We added `filter(n >= 5)`. Without it, TF-IDF's top words are dominated by words used once, by one student, in one level. That is a known weakness: **rare words get high idf**, even when rarity just means "a typo" or "a name." A minimum count is the standard guard.
+The new pieces here:
+
+- `filter(!is.na(level))` drops answers where the student's level is missing (`NA`). The `!` means "not," so this reads "keep rows where level is not missing."
+- `bind_tf_idf(word, level, n)` now treats each *level* (undergraduate, graduate, professional) as a document.
+- `filter(n >= 5)` keeps only words used at least five times within that group. Without it, TF-IDF's top words are dominated by words used once, by one student, in one level. That is a known weakness: **rare words get high idf**, even when rarity just means "a typo" or "a name." A minimum count is the standard guard, and you can raise or lower the 5.
 
 ::: callout-note
 ## In this synthetic data, the differences are noise
@@ -160,11 +197,15 @@ vcu |>
   select(question, text)
 ```
 
+- The first block finds the three highest-scoring words for graduate students, as before, but ends with `pull(word)`. `pull()` extracts one column as a plain list of values (instead of a table), which is what we want here. Typing `top_grad` on its own line then prints the list.
+- `top_grad[1]` picks the **first** item from that list. Square brackets with a number select by position.
+- The second block goes back to the original answers. It keeps graduate students' answers (`filter(level == "Graduate", ...)`) whose lowercased text contains the top word (`str_detect(...)`), and shows five of them. Notice that `filter()` can take several conditions separated by commas; a row has to meet all of them.
+
 This is the check we will do after every method in this book. A number tells you where to look; the text tells you what it means.
 
 ## TF-IDF as a feature matrix
 
-TF-IDF has a second life. If every answer is a document, then every answer becomes a row of numbers, one per word. That matrix is the input to topic models and to the supervised models in @sec-supervised. Here is the long form `tidytext` produces:
+TF-IDF has a second life. If every answer is a document, then every answer becomes a row of numbers, one per word. That grid of numbers (a **matrix**) is the input to topic models and to the supervised models in @sec-supervised. Here is the long form `tidytext` produces:
 
 ```{r}
 #| label: doc-tfidf
@@ -176,13 +217,16 @@ doc_tfidf <- tokens |>
 doc_tfidf |> arrange(desc(tf_idf)) |> head(10)
 ```
 
+Here every *answer* (`doc_id`) is a document, so $N$ is in the thousands. `arrange(desc(tf_idf))` sorts the table from the highest score to the lowest, and `head(10)` shows the top ten rows.
+
 Notice the top rows. A one-word answer has a term frequency of 1, and a word that appears in a single answer gets the maximum idf, so one-word answers made of rare words dominate. Several of these are typos or keyboard mashing ("asdfasdf"), not findings.
 
 That is a property of the weighting, not a discovery. It is also a handy quality check: sorting by tf-idf is a fast way to find junk answers that your cleaning rules missed.
 
 ## Summary
 
-- TF-IDF finds words that distinguish one set of documents from others.
-- The documents are your choice, and the answer depends on it.
+- **TF** measures how common a word is in a document; **IDF** measures how rare it is across documents. TF-IDF multiplies them to find words that are frequent *here* and rare *elsewhere*.
+- A word that appears in every document scores zero, which screens out words like "the" automatically.
+- The **documents** are your choice, and the answer depends on it.
 - Rare words score high; guard against it with a minimum count.
 - Small groups give unstable results. Read the underlying text.

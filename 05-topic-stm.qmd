@@ -4,7 +4,9 @@
 
 LDA gave us themes, but it treats every student the same. It cannot tell us whether graduate students raise different themes than undergraduates, except by a second step after the fact: take each document's topics and compare them across groups by hand.
 
-The **structural topic model (STM)** (Roberts, Stewart, & Tingley, 2019) builds that comparison into the model. You tell it about document-level characteristics, such as student level, and it lets the *prevalence* of each topic depend on them. The result is a topic model that can answer "which topics are more common among graduate students, and how sure are we?"
+The **structural topic model (STM)** (Roberts, Stewart, & Tingley, 2019) builds that comparison into the model. You tell it about document-level characteristics, such as student level, and it lets the *prevalence* of each topic (how much of the text belongs to it) depend on them. The result is a topic model that can answer "which topics are more common among graduate students, and how sure are we?"
+
+By the end of this chapter you will be able to prepare documents for STM, fit a model, read its word lists, and test whether topic use differs between two groups.
 
 ```{r}
 #| label: setup
@@ -17,6 +19,8 @@ vcu <- load_vcu()
 
 ## What STM adds
 
+STM does everything LDA does, and then some. If you read @sec-lda, the core ideas (topics are word lists, documents are mixes of topics, you choose K) all carry over.
+
 | | LDA | STM |
 |---|---|---|
 | Finds topics from word co-occurrence | Yes | Yes |
@@ -24,7 +28,7 @@ vcu <- load_vcu()
 | Topic *wording* can depend on covariates | No | Yes (`content`) |
 | Built-in tools for choosing K and for effects | Few | Many (`searchK`, `estimateEffect`) |
 
-We use the first extension, prevalence. Wording differences (the `content` option) are powerful but need more data per group than we have.
+A **covariate** is just a characteristic of each document, such as the student's level. We use the first extension, **prevalence**: "does this characteristic change *how much* a student talks about each topic?" The second, **content**, asks "does it change *which words* they use for the same topic?" It is powerful but needs more data per group than we have.
 
 ## Documents and covariates
 
@@ -42,9 +46,14 @@ docs <- vcu |>
 count(docs, level)
 ```
 
+- `filter(level %in% c("Undergraduate", "Graduate"))` keeps answers from students in those two groups (`%in%` means "is one of").
+- `group_by(resp_id, level)` followed by `summarise(text = paste(text, collapse = " "))` glues each student's answers into one block of text. This is the same "one document per student" idea as in the LDA chapter. We group by `level` as well so that the level comes along with each student.
+- `mutate(level = factor(...))` turns `level` into a **factor**, a column with a fixed list of categories in a stated order. The order matters: the first level, "Undergraduate," becomes the **reference group** that the other is compared to, which will matter when we read the results.
+- `count(docs, level)` shows how many students are in each group.
+
 ## Preprocess with `textProcessor()`
 
-STM has its own preprocessing: it lowercases, removes punctuation and numbers, drops stop words, and optionally stems. We turn stemming off so that the topic words stay readable, and pass the same domain stop words used earlier.
+STM has its own preprocessing helper. By default it lowercases, removes punctuation and numbers, drops stop words, and stems words (cuts them to a root). We turn stemming off so that the topic words stay readable, and pass the same domain stop words used earlier.
 
 ```{r}
 #| label: process
@@ -68,6 +77,11 @@ out <- prepDocuments(processed$documents, processed$vocab, processed$meta,
 length(out$documents); length(out$vocab)
 ```
 
+- `textProcessor()` takes the text (`documents`) and the table of characteristics that goes with it (`metadata`). `stem = FALSE` turns off stemming. `customstopwords` adds our own stop words. `verbose = FALSE` silences progress messages.
+- The result, `processed`, bundles three things: `documents` (the text converted to word counts), `vocab` (the list of words), and `meta` (the matching characteristics table). The dollar sign (`processed$vocab`) picks one of them out.
+- `prepDocuments()` cleans up further. The option `lower.thresh = 5` removes words that appear in fewer than five documents (the same pruning we did for LDA), and removes any documents left empty.
+- The last line reports how many documents and how many words remain.
+
 ::: callout-warning
 ## Metadata must stay aligned with documents
 
@@ -75,8 +89,6 @@ If `textProcessor` or `prepDocuments` drops a document, the metadata rows must g
 :::
 
 ## Fit the model
-
-The `prevalence` formula says which covariates should shift topic proportions. `init.type = "Spectral"` gives a stable, deterministic starting point, so you get the same topics each time without hunting for a good seed.
 
 ```{r}
 #| label: fit
@@ -95,12 +107,26 @@ fit <- stm(
 )
 ```
 
+The options of `stm()` that matter:
+
+| Option | What it means |
+|---|---|
+| `documents`, `vocab` | The prepared text and word list |
+| `K = 8` | The number of topics. We pick eight as a starting point, as with LDA |
+| `prevalence = ~ level` | The key option. This is a **formula**: the `~` (tilde) reads "depends on." So topic proportions are allowed to depend on `level`. You can add more covariates with `+`, for example `~ level + source` |
+| `data = out$meta` | The table that holds those covariates, one row per document |
+| `init.type = "Spectral"` | How the model begins its search. "Spectral" is a deterministic, stable starting point, so you get the same topics each time without hunting for a good random seed |
+| `seed = 664` | A random seed, for the parts that still involve chance |
+| `verbose = FALSE` | Do not print the progress of each iteration |
+
 ## Reading the topics
 
 `labelTopics()` reports four word lists per topic. Two matter most:
 
 - **Prob**: the most probable words (like LDA's beta)
-- **FREX**: words that are both frequent *and* exclusive to the topic. These are usually the best for naming, because they avoid words that are common everywhere.
+- **FREX**: words that are both **fr**equent *and* **ex**clusive to the topic. These are usually the best for naming, because they avoid words that are common everywhere.
+
+(The other two, **Lift** and **Score**, are other ways of favoring distinctive words.)
 
 ```{r}
 #| label: labels
@@ -108,7 +134,7 @@ fit <- stm(
 labelTopics(fit, n = 7)
 ```
 
-Name each topic from FREX plus Prob, as you did for LDA. Then check the names against real text with `findThoughts()`, which returns the documents most dominated by a topic.
+`n = 7` asks for seven words in each list. Name each topic from FREX plus Prob, as you did for LDA. Then check the names against real text with `findThoughts()`, which returns the documents most dominated by a topic.
 
 ```{r}
 #| label: thoughts
@@ -116,6 +142,8 @@ Name each topic from FREX plus Prob, as you did for LDA. Then check the names ag
 thoughts <- findThoughts(fit, texts = out$meta$text, n = 2, topics = 1:3)
 thoughts$docs[[1]]
 ```
+
+`texts` supplies the original text to display, `n = 2` asks for the two best examples per topic, and `topics = 1:3` limits it to topics 1 through 3. (`1:3` is R shorthand for "1, 2, 3.") The result is a list with one entry per topic, so `thoughts$docs[[1]]` shows the examples for the first. The double square brackets pick one item from a list.
 
 Repeat for each topic. A topic whose top documents do not hang together is not ready to be reported.
 
@@ -129,9 +157,11 @@ Repeat for each topic. A topic whose top documents do not hang together is not r
 plot(fit, type = "summary", n = 5, xlim = c(0, 0.4))
 ```
 
+This draws one line per topic: a dot showing the topic's average share of all the text, labeled with its top words. `n = 5` sets the number of words in each label, and `xlim` sets the horizontal range of the chart. (This chart uses R's basic plotting, not `ggplot2`, so it looks a little different from the others.)
+
 ## The payoff: topics by student level
 
-Now we can ask whether graduate and undergraduate students differ. `estimateEffect()` regresses each document's topic proportion on the covariate, and propagates the model's uncertainty about those proportions into the standard errors. This is more honest than averaging the proportions and comparing them directly.
+Now we can ask whether graduate and undergraduate students differ. `estimateEffect()` fits a simple regression for each topic, and then correctly accounts for the fact that each document's topic proportions are themselves *estimates* rather than known facts.
 
 ```{r}
 #| label: effect
@@ -140,7 +170,17 @@ effect <- estimateEffect(1:K ~ level, fit, metadata = out$meta)
 summary(effect, topics = 1:3)
 ```
 
-Each topic's regression has an intercept (the expected proportion for undergraduates) and a `levelGraduate` coefficient (how much higher or lower graduate students are). A coefficient of 0.03 means graduate students devote 3 percentage points more of their answers to that topic.
+::: callout-note
+## What is a regression, in one paragraph?
+
+A **regression** estimates how much an outcome changes when something else changes. Here the outcome is "the share of a student's text that belongs to topic *k*," and the "something else" is whether the student is a graduate student. The answer is a **coefficient**: the difference in that share between the groups. A **standard error** says how uncertain that difference is. A rough rule is that a coefficient more than about two standard errors from zero is unlikely to be pure chance.
+:::
+
+- `1:K ~ level` is the formula: "for topics 1 through K, relate the topic share to `level`."
+- `metadata = out$meta` supplies the covariates.
+- `summary(effect, topics = 1:3)` prints the results for the first three topics.
+
+Each topic's results have an **intercept** (the expected topic share for undergraduates, the reference group) and a `levelGraduate` coefficient (how much higher or lower graduate students are). A coefficient of 0.03 means graduate students devote 3 percentage points more of their answers to that topic. Look at the **Estimate**, the **Std. Error**, and the p-value column. The p-value is the chance of seeing a difference this big if there were really none; small values (conventionally under 0.05) suggest a real difference.
 
 Rather than read eight regression tables, plot the differences.
 
@@ -162,17 +202,24 @@ plot(effect,
      verbose.labels = FALSE)
 ```
 
-Read this the way you read any effect estimate: look at the interval, not just the point. Most differences will be small and cross zero, because we have fewer than 200 graduate students. A topic whose interval clearly excludes zero is a candidate finding. Go back and read the graduate and undergraduate documents for that topic before saying anything about it.
+The options explained:
+
+- `covariate = "level"` says which characteristic we are comparing on.
+- `method = "difference"` plots the difference between two groups. `cov.value1 = "Graduate"` and `cov.value2 = "Undergraduate"` say which two, and the difference is the first minus the second. So a dot to the right of zero means graduate students use the topic *more*.
+- `model = fit` supplies the fitted model (needed for labels).
+- `xlab` sets the label of the horizontal axis. `labeltype = "custom"` with `custom.labels` lets us label each row "Topic 1," "Topic 2," and so on, instead of listing words. (`paste("Topic", 1:K)` builds those labels.)
+
+Read this the way you read any effect estimate: look at the **interval**, the horizontal line through each dot, which shows the range of plausible differences. If the line crosses zero, the data are consistent with no difference at all. Most intervals will cross zero, because we have fewer than 200 graduate students. A topic whose interval clearly excludes zero is a candidate finding. Go back and read the graduate and undergraduate documents for that topic before saying anything about it.
 
 ::: callout-important
 ## Eight topics, eight tests
 
-We are looking at eight differences at once. Some intervals will exclude zero by chance. Treat the topic-by-level comparisons as a way to generate hypotheses, and confirm anything interesting by reading and by a different sample if you can.
+We are looking at eight differences at once. If there were no true differences, about one interval in twenty would still miss zero by chance, and with eight topics you should expect it to happen sometimes. Treat the topic-by-level comparisons as a way to generate hypotheses, and confirm anything interesting by reading and by a different sample if you can.
 :::
 
 ## Choosing K with `searchK()`
 
-STM includes tools for comparing values of K using held-out likelihood, residuals, and semantic coherence.
+STM includes tools for comparing values of K using several diagnostics.
 
 ```{r}
 #| label: searchk
@@ -186,17 +233,26 @@ k_search <- searchK(out$documents, out$vocab, K = c(4, 6, 8, 10, 12),
 plot(k_search)
 ```
 
-`plot(k_search)` shows four diagnostics. Look for a K where held-out likelihood has leveled off and residuals are low, while semantic coherence has not collapsed. As with LDA, the diagnostics narrow the range and you choose within it by reading.
+This block is set to display only (`eval: false`) because it takes a few minutes. `searchK()` fits a model for each K you list and measures:
+
+| Diagnostic | In plain terms | Look for |
+|---|---|---|
+| **Held-out likelihood** | How well the model predicts words in documents it did not see during fitting | A K where the curve stops climbing |
+| **Residuals** | How much the model's predictions miss by | Lower is better |
+| **Semantic coherence** | Whether a topic's top words tend to appear together in the same documents | Higher is better, but it usually falls as K grows |
+| **Exclusivity** | Whether a topic's words are unique to it | Higher is better |
+
+`plot(k_search)` shows them side by side. As with LDA, the diagnostics narrow the range and you choose within it by reading the topics.
 
 ## Cautions
 
 - **The covariate adjusts topic prevalence; it does not explain it.** A difference by level could reflect program differences, the interviewer, or who was available at which event.
 - **Small groups give wide intervals.** If a result matters, check it by reading the underlying documents.
-- **STM is still a bag-of-words model.** It does not read word order, negation, or sarcasm.
+- **STM is still a bag-of-words model.** It treats each document as a bag of words and does not read word order, negation, or sarcasm.
 
 ## Summary
 
-- STM is LDA that knows about your covariates.
-- Name topics from FREX words, then verify with `findThoughts()`.
-- `estimateEffect()` gives properly uncertain comparisons of topic prevalence between groups.
+- STM is LDA that knows about your covariates: you tell it the characteristics of each document, and it lets topic prevalence vary with them.
+- Name topics from **FREX** words, then verify with `findThoughts()`.
+- `estimateEffect()` gives properly uncertain comparisons of topic prevalence between groups. Read the intervals, not just the dots.
 - Use `out$meta`, not your original data frame, after preprocessing.
