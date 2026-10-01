@@ -23,6 +23,8 @@ data/raw/vcu_cares.xlsx
 
 (Create the folders if they do not exist. `data/` is in `.gitignore`.)
 
+**No access to the real data?** Skip this step and use the synthetic sample that ships with the repository instead (`sample-data/`). It has the same structure and size, but the text is invented; see `sample-data/README.md` for what it can and cannot be used for.
+
 ## Step 2: Build the analysis file
 
 From the project root, in the Terminal tab:
@@ -31,7 +33,13 @@ From the project root, in the Terminal tab:
 Rscript R/01-prep-data.R
 ```
 
-This stacks the workbook's three sheets into one long table, `data/vcu_cares_long.csv`, with one row per answer. It drops demographics (major, GPA, gender, race/ethnicity) because no chapter uses them. It should report about 3,700 answers from about 1,240 respondents.
+or, for the synthetic sample:
+
+```bash
+Rscript R/01-prep-data.R sample-data/vcu_cares_synthetic.xlsx
+```
+
+This stacks the workbook's three sheets into one long table, `data/vcu_cares_long.csv`, with one row per answer. It drops demographics (major, GPA, gender, race/ethnicity) because no chapter uses them. It should report about 3,600 to 3,700 answers from about 1,240 respondents (the real data and the synthetic sample are both close to this).
 
 If a chapter stops with "Can't find data/vcu_cares_long.csv", you skipped this step.
 

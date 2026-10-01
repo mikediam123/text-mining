@@ -30,7 +30,7 @@ Work through a chapter with RStudio open next to your browser and run each block
 ::: callout-important
 ## A note on the data
 
-The VCU CARES responses are real students' words. The data files are not part of this repository and should never be added to it. See `SETUP.md` for how to get the data onto your machine and how the project keeps it out of version control.
+The VCU CARES responses are real students' words. The data files are not part of this repository and should never be added to it. See `SETUP.md` for how to get the data onto your machine and how the project keeps it out of version control. If you do not have access to the real data, a synthetic sample with the same structure is included so you can follow along; its text is invented, so treat results from it as practice, not findings.
 :::
 
 ## Software you will need

@@ -1,6 +1,8 @@
 # Build the analysis file used by every chapter.
 #
 # Input : data/raw/vcu_cares.xlsx   (never committed; see .gitignore)
+#         or pass a path, e.g. the synthetic stand-in:
+#         Rscript R/01-prep-data.R sample-data/vcu_cares_synthetic.xlsx
 # Output: data/vcu_cares_long.csv   (never committed)
 #
 # One row per student answer. The three source sheets are stacked into a
@@ -13,8 +15,13 @@
 library(tidyverse)
 library(readxl)
 
-raw <- "data/raw/vcu_cares.xlsx"
-stopifnot(file.exists(raw))
+args <- commandArgs(trailingOnly = TRUE)
+raw  <- if (length(args)) args[1] else "data/raw/vcu_cares.xlsx"
+if (!file.exists(raw)) {
+  stop("Can't find ", raw, ". Put the real workbook there, or run on the synthetic ",
+       "sample:  Rscript R/01-prep-data.R sample-data/vcu_cares_synthetic.xlsx", call. = FALSE)
+}
+dir.create("data", showWarnings = FALSE)
 
 clean_level <- function(x) {
   x <- str_to_lower(str_squish(x))

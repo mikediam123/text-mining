@@ -21,14 +21,20 @@ The arc runs from descriptive methods (counts, TF-IDF) through structure-finding
 
 The VCU CARES responses are real student statements. **They must never be committed.** `.gitignore` excludes the whole `data/` folder, and `docs/` and `_freeze/` (which contain verbatim quotes in rendered output) are ignored too until a publishing decision is made. See `SETUP.md`.
 
+## Synthetic sample data
+
+Lab members without access to the real responses can run everything on `sample-data/vcu_cares_synthetic.xlsx`, a generated dataset with the same structure and size. The text is invented, so it is for learning the methods, not for findings. See `sample-data/README.md`.
+
 ## Project layout
 
 ```
 index.qmd, 01-...08-*.qmd   book chapters
 _quarto.yml                 book configuration
 styles.scss                 theme (same palette as the MLM book)
-R/01-prep-data.R            builds data/vcu_cares_long.csv from the raw workbook
+R/00-make-synthetic.R       generates the synthetic sample workbook
+R/01-prep-data.R            builds data/vcu_cares_long.csv from the raw (or synthetic) workbook
 R/helpers.R                 shared setup: data loading, cleaning rules, plot theme
+sample-data/                synthetic workbook (safe to commit)
 data/                       NOT COMMITTED: raw workbook and derived files
 ```
 
