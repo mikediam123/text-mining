@@ -142,7 +142,7 @@ dim(x_train); dim(x_test)
 
 Both matrices have the same columns, which is what lets a model trained on one score the other. Words in the test set that never appeared in training are simply ignored: the model has nothing to say about them.
 
-The matrix is **sparse**: nearly every cell is zero, since each answer uses only a handful of the roughly 500 vocabulary words. Storing it as a sparse matrix keeps it small.
+The matrix is **sparse**: nearly every cell is zero, since each answer uses only a handful of the few hundred vocabulary words. Storing it as a sparse matrix keeps it small.
 
 ## Step 4: Fit a regularized logistic regression
 
@@ -287,7 +287,7 @@ test |>
 
 Mistakes usually fall into three bins. Some are real model failures: the answer is clearly about activities, and the model missed it, often because it uses a word the training data never saw. Some are **label noise**: the answer is not really about activities, and the interviewer ticked the box anyway, or the reverse. And some are judgment calls that two human coders would disagree about. If many errors are the second and third kind, the model's ceiling is limited by the labels, not by the algorithm.
 
-The lists above show examples of each. A one-word answer with nothing to do with student life was coded as Student activities (label noise, or perhaps a slip of the checkbox), while a short answer about "meeting people" at events was not coded at all (a judgment call, and arguably a miss by the interviewer rather than the model). Many of the top false alarms are about events, networking, and career fairs, which are *near* the topic. Whether they belong is a coding-scheme question that no algorithm can settle.
+The lists above show examples of each. Among the missed answers, several barely mention the topic they were coded with: the code is there, but the words are not. That is label noise, and the model cannot be blamed for failing to find words that are not in the text. Among the false alarms, many are about networking and professional events, which are *near* the Student activities topic but were coded under professional development instead. Whether they belong is a coding-scheme question that no algorithm can settle.
 
 ## Step 8: Scaling up to many topics
 
@@ -331,7 +331,7 @@ ggplot(results, aes(auc, reorder(topic, auc))) +
   labs(x = "AUC on held-out students", y = NULL)
 ```
 
-Topics with concrete vocabulary, like housing, financial aid, and safety, are the easiest. Abstract topics like "sense of belonging" and "student voice" are the hardest, because students express them in many different ways. A topic's difficulty tells you something about the topic as much as about the model.
+In this synthetic data, how well a topic is predicted mostly reflects how many examples it has and how much noise was built in, not how abstract the topic is. With real interviews you would expect a wider spread: concrete topics such as housing or financial aid tend to be easy, because students use distinctive words for them, while abstract topics such as "sense of belonging" tend to be harder, because students express them in many different ways. When that happens, a topic's difficulty tells you something about the topic as much as about the model.
 
 Two cautions on reading this table. First, each topic is scored on a single test split with only 20 to 75 true cases, so differences of a few hundredths in AUC are noise. Second, you may see a `glmnet` convergence warning on some topics. It means the optimizer did not finish for the very smallest penalties on a weak-signal topic, and `glmnet` returns the solutions for the larger penalties instead. It is worth knowing about but does not invalidate the table.
 

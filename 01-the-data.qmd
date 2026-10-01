@@ -12,6 +12,12 @@ Interviewers asked VCU students three open-ended questions:
 2. What is the biggest concern you have regarding how VCU supports students? (**concerns**)
 3. What are the top three things VCU can do today to make your experience the best it can be? (**ideas**)
 
+::: callout-important
+## This is a synthetic version of the data
+
+Everything below describes the structure of the real study. The text you will see in this book was generated to match that structure: same sheets, same columns, same row counts, similar answer lengths, and topic codes ticked at the real rates. It contains no real student responses. See `sample-data/README.md` for how it was made and what it can and cannot be used for.
+:::
+
 The answers were collected in three batches, which arrive as three sheets in the original Excel workbook. The first and largest batch also has something the others lack: for the strength and concern questions, the interviewer ticked which topics the answer touched on, such as Advising, Dining, or Safety. Those hand-assigned codes become the answer key for the supervised learning in @sec-supervised.
 
 ## Load the helpers and the data
@@ -96,7 +102,7 @@ vcu_raw |>
   head(15)
 ```
 
-"None," "n/a," "nothing," and "test" are the interviewer's or the student's way of skipping the question. Left in, they would show up as some of the most frequent "words" in the whole dataset and tell us nothing about student experience.
+"None," "n/a," and "nothing" are the interviewer's or the student's way of skipping the question. Left in, they would show up as some of the most frequent "words" in the whole dataset and tell us nothing about student experience.
 
 The pattern in `R/helpers.R` names these placeholders. Here is how many answers it catches, and what a handful of the removed ones look like:
 
@@ -154,4 +160,4 @@ vcu |>
   select(question, level, text)
 ```
 
-Notice how different the three questions sound. Strengths name things ("TRIO," "the library"). Concerns describe problems. Ideas are imperative ("more events"). Whatever the methods in the next chapters find, they will be finding differences like these, and your reading is how you will check them.
+Notice how different the three questions sound. Strengths praise things. Concerns describe problems. Ideas are imperative ("more," "improve," "add"). Whatever the methods in the next chapters find, they will be finding differences like these, and your reading is how you will check them.

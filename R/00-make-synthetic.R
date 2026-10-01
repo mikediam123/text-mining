@@ -111,34 +111,61 @@ frames <- list(
                "Love the {x}", "The {x} made a big difference for me", "Good {x}",
                "Positive experience with the {x}", "Helpful {x}",
                "{X}, which made my first year easier", "Great {x}", "The {x} here are strong",
-               "I'd say the {x} stands out"),
+               "I'd say the {x} stands out", "Thankful for the {x}", "{X} is one of the best things about VCU",
+               "Enjoyed the {x}", "I was surprised how good the {x} were", "VCU does well with the {x}",
+               "Grateful for the {x}", "{X} - they really try", "Solid {x}",
+               "The {x} helped me get started", "Easy to use: the {x}", "I rely on the {x}",
+               "{X} has improved since I got here", "Nothing but good things to say about the {x}",
+               "The {x} felt welcoming", "Impressed by the {x}", "Compared to other schools, the {x} are ahead",
+               "The {x} kept me on track", "My favorite part is the {x}"),
   concern  = c("Problems with the {x}", "Not enough {x}", "Worried about the {x}",
                "Frustrated with the {x}", "{X} - hard to get information",
                "The {x} could be a lot better", "Long waits for {x}",
                "Confusing {x}", "Hard to get help with {x}", "I don't feel the {x} work for everyone",
                "{X} doesn't meet student needs", "Concerned about {x}",
                "Need better {x}", "I wish there were more helpful {x}", "More support with {x} would help",
-               "A better {x} would be good", "Would be great to have more {x}"),
+               "A better {x} would be good", "Would be great to have more {x}",
+               "{X} is inconsistent from one semester to the next", "I can never get a straight answer about {x}",
+               "The {x} feel understaffed", "Too expensive: the {x}", "{X} is out of date",
+               "No one told me about the {x}", "Disappointed by the {x}", "{X} keeps getting worse",
+               "Struggling with the {x}", "The {x} are hard to find", "Feels like nobody is in charge of the {x}",
+               "The {x} are not accessible to everyone", "{X} - needs attention",
+               "Unclear who to ask about the {x}", "Barriers around {x}"),
   idea     = c("More {x}", "Improve the {x}", "Better {x}", "Expand {x}",
                "Make {x} easier to find", "Add more {x}", "Fund the {x}",
-               "Lower the cost of {x}", "Simplify the {x}", "More communication about {x}")
+               "Lower the cost of {x}", "Simplify the {x}", "More communication about {x}",
+               "Hire more people for the {x}", "Extend hours for the {x}", "Make {x} free",
+               "Promote the {x} more", "Survey students about the {x}", "Train staff on the {x}",
+               "Modernize the {x}", "Create a single place to learn about {x}", "Open up more {x}",
+               "Give students a say in the {x}", "Put the {x} online", "Offer {x} on weekends",
+               "Reduce the wait for {x}", "Rethink the {x}")
 )
 frames_note <- list(   # interviewer-paraphrase style used on the paper forms
-  strength = c("Likes the {x}", "Appreciates the {x}", "Positive about {x}", "Says {x} was helpful"),
-  concern  = c("Doesn't like {x}", "Frustrated by the {x}", "Concerned about {x}", "Says {x} is hard to deal with"),
-  idea     = c("Wants more {x}", "Suggests improving {x}", "Would like better {x}", "Asks for {x}")
+  strength = c("Likes the {x}", "Appreciates the {x}", "Positive about {x}", "Says {x} was helpful",
+               "Mentioned that the {x} helped", "Speaks well of the {x}", "Thinks the {x} are strong"),
+  concern  = c("Doesn't like {x}", "Frustrated by the {x}", "Concerned about {x}", "Says {x} is hard to deal with",
+               "Wants the {x} to change", "Feels the {x} is lacking", "Had trouble with the {x}"),
+  idea     = c("Wants more {x}", "Suggests improving {x}", "Would like better {x}", "Asks for {x}",
+               "Recommends expanding {x}", "Thinks the {x} should be cheaper", "Proposes changes to the {x}")
 )
 elaborations <- c(
-  "It took me weeks to figure out who to contact.",
-  "My friends have said the same thing.",
-  "That is what I hear from other students too.",
-  "It was different from what I expected before I enrolled.",
-  "I only found out about it by accident.",
-  "I wish someone had told me earlier.",
-  "That would help a lot of students.",
-  "It matters more than people realize.",
-  "This has been true since my first semester.",
-  "I commute, so it affects me a lot."
+  "It took me weeks to figure out who to contact.", "My friends have said the same thing.",
+  "That is what I hear from other students too.", "It was different from what I expected before I enrolled.",
+  "I only found out about it by accident.", "I wish someone had told me earlier.",
+  "That would help a lot of students.", "It matters more than people realize.",
+  "This has been true since my first semester.", "I commute, so it affects me a lot.",
+  "I work part time, so timing is hard for me.", "As a transfer student I had to figure it out alone.",
+  "My roommate had the opposite experience.", "I have raised this before and nothing changed.",
+  "It depends a lot on which department you are in.", "I'm a first-generation student, so I notice this.",
+  "I did not know where to look.", "It is better than it was last year.",
+  "Other schools I looked at seemed to handle this better.", "I'd gladly help if someone asked.",
+  "A friend of mine left because of this.", "My advisor mentioned the same issue.",
+  "Most of my classmates feel the same.", "It really shapes how I feel about being here.",
+  "Honestly it surprised me.", "Maybe it is just my program.", "I notice it most near the end of the term.",
+  "It would be an easy fix.", "Online students get left out of this.", "I live off campus, so I rarely hear about it.",
+  "Grad students seem to be forgotten here.", "It was the first thing I noticed.",
+  "People tell me it was worse before.", "I think new students would benefit most.",
+  "The information is out there but scattered.", "It seems to depend on who you talk to."
 )
 placeholders <- c("None", "none", "N/A", "n/a", "NA", "nothing", "Nothing", "No concerns",
                   "no concerns", "none!", "Not sure", "No answer", "I don't know", "test",
@@ -151,6 +178,9 @@ cap <- function(s) paste0(toupper(substr(s, 1, 1)), substring(s, 2))
 fragment <- function(tag, kind, note = FALSE) {
   x <- sample(bank[[tag]], 1)
   f <- sample((if (note) frames_note else frames)[[kind]], 1)
+  # Frames with a bare "{x}" (no "the" before it) read badly with a subject that
+  # already starts with an article ("Add more the campus layout")
+  if (!str_detect(f, fixed("the {x}")) && str_detect(f, fixed("{x}"))) x <- str_remove(x, "^(the|my) ")
   f <- str_replace(f, fixed("{X}"), cap(x))
   f <- str_replace(f, fixed("{x}"), x)
   str_replace_all(f, "\\b(the|The) (the|my) ", "\\1 ") |>   # avoid "the the library" / "the my advisor"
@@ -171,8 +201,10 @@ roughen <- function(s) {
 
 make_text <- function(tag_set, kind, note = FALSE) {
   r <- runif(1)
-  if (r < 0.10 && !note) {                              # bare keyword answers ("Housing")
-    return(roughen(sample(bank[[sample(tag_set, 1)]], 1)) |> str_remove("\\.$"))
+  topical <- setdiff(tag_set, "General")                # vague phrases make poor stand-alone answers
+  if (r < 0.10 && !note && length(topical)) {           # bare keyword answers ("Housing")
+    t <- if (length(topical) == 1) topical else sample(topical, 1)
+    return(roughen(sample(bank[[t]], 1)) |> str_remove("\\.$"))
   }
   if (kind == "idea" && r > 0.88 && !note) {            # numbered lists, as students were asked for three things
     ts <- sample(tag_set, 3, replace = TRUE)
@@ -232,8 +264,8 @@ tick_names <- c(slot_names[1:13], "Student support services", "Student voice",
 level <- sample(c("Undergraduate", "Graduate", "First Professional"), n1, TRUE, c(.830, .155, .015))
 
 a1 <- map(seq_len(n1), \(i) answer_cell("strength", rate_strength, n_codes_strength, .005, .007))
-a2 <- map(seq_len(n1), \(i) answer_cell("concern",  rate_concern,  n_codes_concern,  .048, .060))
-a3 <- map(seq_len(n1), \(i) answer_cell("idea",     rate_concern,  n_codes_concern,  .034, .040, tagged = FALSE))
+a2 <- map(seq_len(n1), \(i) answer_cell("concern",  rate_concern,  n_codes_concern,  .048, .095))
+a3 <- map(seq_len(n1), \(i) answer_cell("idea",     rate_concern,  n_codes_concern,  .034, .043, tagged = FALSE))
 
 # A few keyboard-mashing answers, as in the real data
 junk_rows <- sample(n1, 4)

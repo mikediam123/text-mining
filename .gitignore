@@ -1,5 +1,7 @@
-# ---- DATA: never commit student responses ---------------------------------
-# The raw workbook and every file derived from it stay on your machine.
+# ---- DATA ------------------------------------------------------------------
+# data/ holds files derived from a workbook, and a real workbook if you have one.
+# NEVER commit real student responses. The synthetic workbook lives in
+# sample-data/ and is safe to commit.
 /data/
 
 # Quarto
@@ -11,9 +13,9 @@
 /*_files/
 /*_cache/
 
-# Rendered output and cached results contain verbatim student quotes.
-# Un-ignore these two lines once you've decided where the site will live
-# (see SETUP.md, "Publishing").
+# Rendered output is built by GitHub Actions (.github/workflows/publish.yml) from
+# the synthetic data, so it is not committed. This also guarantees that a local
+# render against REAL data can never end up in the repository.
 /docs/
 /_freeze/
 

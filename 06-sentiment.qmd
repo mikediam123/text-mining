@@ -76,9 +76,9 @@ ggplot(by_q, aes(question, mean)) +
   labs(x = NULL, y = "Mean net sentiment (positive minus negative words)")
 ```
 
-Strengths score clearly positive, and ideas land in between. Concerns are the surprise: their mean is essentially zero, not negative. Answers to "what is your biggest concern?" contain as many positive words as negative ones.
+Strengths score clearly positive, and ideas land in between. Concerns are the surprise: their mean is close to zero (slightly below), not strongly negative. Answers to "what is your biggest concern?" contain nearly as many positive words as negative ones.
 
-That sounds wrong until you read the answers. Students phrase concerns as wishes ("better support for art students," "more helpful advisors"), and a lexicon sees "better," "support," and "helpful" and scores them positive. It cannot tell that the sentence is a complaint. This is the central limit of lexicon sentiment: it measures the *vocabulary* of positivity, not the *stance* of the speaker.
+That sounds wrong until you read the answers. Students phrase concerns as wishes ("need better advising appointments," "more support with registration would help"), and a lexicon sees "better," "support," and "helpful" and scores them positive. It cannot tell that the sentence is a complaint. This is the central limit of lexicon sentiment: it measures the *vocabulary* of positivity, not the *stance* of the speaker.
 
 ::: callout-important
 ## Compare within a question, not across them
@@ -128,7 +128,7 @@ tokens |>
   labs(x = "Count", y = NULL)
 ```
 
-Read this chart skeptically. Look for words that the lexicon scores one way but that mean something else here. Two words stand out. "Support" is positive in Bing, but in "student support services" it is the name of a program, not an opinion. And "like" is the single most common positive word, yet in "events like the welcome fair" it is a preposition, not an expression of liking. Whenever a topic word or a function word carries a sentiment label, you are measuring the topic, or the grammar, not the feeling.
+Read this chart skeptically. Look for words that the lexicon scores one way but that mean something else here. Two words stand out. "Support" is the most common positive word, but in "student support services" it is the name of a program, not an opinion. And "like" also ranks among the top positive words, yet it appears in "doesn't like," where it means the opposite, and in comparisons ("events like the welcome fair"), where it is a preposition. Whenever a topic word or a function word carries a sentiment label, you are measuring the topic, or the grammar, not the feeling.
 
 ## Where lexicons fail: negation
 
@@ -149,9 +149,11 @@ bigram_sent <- vcu |>
 
 bigram_sent |> count(w1, w2, sentiment, sort = TRUE) |> head(10)
 nrow(bigram_sent)
+
+n_matches <- nrow(inner_join(tokens, bing, by = "word"))   # all sentiment-word matches, for scale
 ```
 
-Each of these is a case where Bing assigned the wrong sign. "Not enough" is the biggest: "enough" is positive in the lexicon, but in this dataset it almost always follows "not." Out of roughly 4,600 sentiment-word matches, 164 follow a negator, about 4%. So negation is not wrecking the averages here, but it would matter much more in longer, more argumentative text.
+Each of these is a case where Bing assigned the wrong sign. "Not enough" and "not accessible" are the biggest: "enough" and "accessible" are positive in the lexicon, but here they follow "not." "Doesn't like" is the same problem. Out of about `r format(n_matches, big.mark = ",")` sentiment-word matches, `r nrow(bigram_sent)` follow a negator, roughly `r round(100 * nrow(bigram_sent) / n_matches)`%. So negation is not wrecking the averages here, but it would matter much more in longer, more argumentative text.
 
 Note that fixing negation does not solve the concern problem above. Dropping "enough" from the lexicon barely moves the mean for concerns. The bigger issue is that concerns are *worded* with positive vocabulary.
 
@@ -175,9 +177,9 @@ vcu_sent |>
   select(net, text)
 ```
 
-Read the most positive concerns and you will see that many are complaints ("there are not enough majors"). Their high scores come from negation and wish-phrasing, not from happiness. This is the kind of result that looks fine in a chart and falls apart when you read it.
+Read the most positive concerns and you will see that they are complaints worded with "better," "support," and "helpful." Their high scores come from wish-phrasing and negation, not from happiness. This is the kind of result that looks fine in a chart and falls apart when you read it.
 
-Length is a second distortion. Within the concerns, both positive and negative word counts rise with answer length (correlations around .5), so longer answers spread out to the extremes while short ones sit near zero. You could divide by length or use the positive share instead of a raw difference. Neither is clearly right; it depends on whether you think a long complaint is "more negative" than a short one.
+Length is a second distortion. Within the concerns, both positive and negative word counts rise with answer length (correlations around .6), so longer answers spread out to the extremes while short ones sit near zero. You could divide by length or use the positive share instead of a raw difference. Neither is clearly right; it depends on whether you think a long complaint is "more negative" than a short one.
 
 ## Summary
 

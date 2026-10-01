@@ -27,7 +27,7 @@ tokens |> select(doc_id, question, word) |> head(10)
 nrow(vcu); nrow(tokens)
 ```
 
-The 3,447 answers became about 56,000 rows. Notice that `unnest_tokens()` also lowercased everything and stripped punctuation. Those are defaults, and they are cleaning decisions made for you: "VCU" and "vcu" now count as the same word, which is usually what we want.
+The `r format(nrow(vcu), big.mark = ",")` answers became about `r format(nrow(tokens), big.mark = ",")` rows. Notice that `unnest_tokens()` also lowercased everything and stripped punctuation. Those are defaults, and they are cleaning decisions made for you: "VCU" and "vcu" now count as the same word, which is usually what we want.
 
 ## Counting words
 
@@ -43,7 +43,7 @@ tokens |>
   labs(x = "Count", y = NULL)
 ```
 
-This is the classic first result in text mining, and it is nearly useless. The most frequent words are "the," "to," "and," "of": words that appear in all English and say nothing about VCU.
+This is the classic first result in text mining, and it is nearly useless. The most frequent words are function words like "the," "i," "to," and "for": words that appear in all English and say nothing about VCU.
 
 ## Stop words
 
@@ -62,6 +62,8 @@ We will use the `snowball` list, which is short and conservative. The longer `SM
 
 stops <- stop_words |> filter(lexicon == "snowball")
 
+n_before <- nrow(tokens)          # all tokens, from the chunk above
+
 tokens <- vcu |>
   unnest_tokens(word, text) |>
   anti_join(stops, by = "word")
@@ -69,7 +71,7 @@ tokens <- vcu |>
 nrow(tokens)
 ```
 
-About 40% of the tokens disappeared. Now the counts, overall and by question:
+About `r round(100 * (1 - nrow(tokens) / n_before))`% of the tokens disappeared. Now the counts, overall and by question:
 
 ```{r}
 #| label: fig-top-by-question
@@ -126,7 +128,7 @@ tokens |>
   labs(x = "Count", y = NULL)
 ```
 
-Now we have a picture of what students talk about: campus, events, housing, resources, and support lead the list, with career, food, and parking close behind. This is a legitimate first result. Its limit is that a raw count rewards words that are long-winded or frequent in the biggest group. We will fix that in @sec-tfidf.
+Now we have a picture of what students talk about: words like "campus," "help," "helpful," "better," "communication," and "support" lead the list. In a real dataset, concrete topics ("housing," "financial," "events") would be more prominent. Here, generic words rise because the synthetic text is assembled from sentence templates, a reminder that frequent words partly reflect *how* people phrase things, not just what they talk about. This is a legitimate first result. Its limit is that a raw count rewards words that are long-winded or frequent in the biggest group. We will fix that in @sec-tfidf.
 
 ## Beyond single words: bigrams
 
@@ -145,9 +147,9 @@ bigrams <- vcu |>
 bigrams |> count(bigram, sort = TRUE) |> head(20)
 ```
 
-We split each bigram into two words so that we can filter stop words from *either* position. Pairs like "financial aid," "mental health," and "career fairs" surface here that were invisible in the single-word counts.
+We split each bigram into two words so that we can filter stop words from *either* position. Pairs like "getting help," "first generation," and "academic coaching" surface here that are more informative than their separate words.
 
-Read the list for artifacts too. The pair "e g" is the abbreviation "e.g." with its periods stripped. It is not a theme, and it is a reminder that tokenizing is a blunt instrument. Add "e" and "g" to the stop words if it bothers you.
+Read the list for artifacts too. Several of the top pairs come from the templates that built this dataset ("gladly help" and "someone asked" are halves of one stock sentence), and in real text you will see artifacts of a different kind: the abbreviation "e.g." becomes the pair "e g," for example. Tokenizing is a blunt instrument, so scan the list for pairs that are not themes.
 
 ### A network of word pairs
 

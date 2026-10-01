@@ -26,8 +26,8 @@ placeholder_pattern <- paste0(
 #   clean = FALSE keeps the placeholder answers (used in Chapter 1).
 load_vcu <- function(path = "data/vcu_cares_long.csv", clean = TRUE) {
   if (!file.exists(path)) {
-    stop("Can't find ", path, ". Put the raw workbook in data/raw/vcu_cares.xlsx ",
-         "and run  Rscript R/01-prep-data.R  first. See SETUP.md.", call. = FALSE)
+    stop("Can't find ", path, ". Run  Rscript R/01-prep-data.R  from the project root ",
+         "first. See SETUP.md.", call. = FALSE)
   }
   # na = "" so that an answer that is literally the text "NA" is kept as text
   d <- readr::read_csv(path, na = "", show_col_types = FALSE) |>

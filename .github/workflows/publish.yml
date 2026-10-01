@@ -1,0 +1,77 @@
+# Builds the book from the SYNTHETIC sample data and publishes it to GitHub Pages.
+#
+# - Every push and pull request runs the build, so a chapter that stops rendering
+#   (for example the topic-model chapters) is caught before it reaches the site.
+# - Only pushes to main deploy.
+#
+# One-time setup: Settings > Pages > Build and deployment > Source = "GitHub Actions".
+name: Build and publish book
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          # setup-r-dependencies also installs the system libraries these need
+          # (for example the GNU Scientific Library for topicmodels)
+          packages: |
+            any::tidyverse
+            any::readxl
+            any::tidytext
+            any::topicmodels
+            any::stm
+            any::glmnet
+            any::Matrix
+            any::ggraph
+            any::igraph
+            any::rsample
+            any::rmarkdown
+            any::knitr
+            any::downlit
+            any::xml2
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Build the analysis file from the synthetic workbook
+        run: Rscript R/01-prep-data.R
+
+      - name: Render the book
+        run: quarto render
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

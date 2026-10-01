@@ -4,6 +4,14 @@ This is a lab guide to text mining in R. It is meant to give lab members a worki
 
 We work through a single dataset the whole way. VCU CARES is a set of short interviews with VCU students about what the university does well, what worries them, and what they would change. Using one dataset means you can watch the same answers get described, grouped, scored, and predicted in different ways, and compare what each method gives you.
 
+::: callout-important
+## The data in this book are synthetic
+
+The real VCU CARES responses are student statements and cannot be shared. The dataset used throughout this book is a **synthetic stand-in**: it has the same structure and size as the real workbook (three sheets, about 1,240 students, three questions each, and interviewer topic codes), but every word of text was generated. Nothing in it was said by a real student.
+
+That makes it safe to publish and lets everyone run every line of code. It also means the *findings* are not findings. Differences between undergraduate and graduate students, for example, are random by construction. Use the book to learn the methods and to see how they behave, then apply them to real data.
+:::
+
 ## The path through the book
 
 The chapters move from methods that describe the text to methods that model it.
@@ -27,10 +35,10 @@ Each chapter follows the same shape. We state a question, run the code that answ
 
 Work through a chapter with RStudio open next to your browser and run each block as you go. Text mining in particular rewards poking around: change a stop-word list, change the number of topics, and watch what moves.
 
-::: callout-important
-## A note on the data
+::: callout-note
+## Running it yourself
 
-The VCU CARES responses are real students' words. The data files are not part of this repository and should never be added to it. See `SETUP.md` for how to get the data onto your machine and how the project keeps it out of version control. If you do not have access to the real data, a synthetic sample with the same structure is included so you can follow along; its text is invented, so treat results from it as practice, not findings.
+`SETUP.md` shows how to build the analysis file from the synthetic workbook in two commands. If you have approved access to the real VCU CARES workbook, you can point the same scripts at it. Real data must never be added to this repository; `.gitignore` keeps the `data/` folder out of version control.
 :::
 
 ## Software you will need

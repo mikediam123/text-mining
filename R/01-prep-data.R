@@ -1,9 +1,12 @@
 # Build the analysis file used by every chapter.
 #
-# Input : data/raw/vcu_cares.xlsx   (never committed; see .gitignore)
-#         or pass a path, e.g. the synthetic stand-in:
-#         Rscript R/01-prep-data.R sample-data/vcu_cares_synthetic.xlsx
-# Output: data/vcu_cares_long.csv   (never committed)
+# By default this reads the SYNTHETIC workbook that ships with the repo, so the
+# book builds for anyone. The real VCU CARES workbook has the same layout.
+#
+# Input : sample-data/vcu_cares_synthetic.xlsx   (default; synthetic, safe to share)
+#         or pass a path to a workbook with the same layout, e.g. the real one:
+#         Rscript R/01-prep-data.R data/raw/vcu_cares.xlsx   (never commit this file)
+# Output: data/vcu_cares_long.csv   (derived; gitignored)
 #
 # One row per student answer. The three source sheets are stacked into a
 # single long table. Demographics (major, GPA, gender, race/ethnicity) are
@@ -16,10 +19,10 @@ library(tidyverse)
 library(readxl)
 
 args <- commandArgs(trailingOnly = TRUE)
-raw  <- if (length(args)) args[1] else "data/raw/vcu_cares.xlsx"
+raw  <- if (length(args)) args[1] else "sample-data/vcu_cares_synthetic.xlsx"
 if (!file.exists(raw)) {
-  stop("Can't find ", raw, ". Put the real workbook there, or run on the synthetic ",
-       "sample:  Rscript R/01-prep-data.R sample-data/vcu_cares_synthetic.xlsx", call. = FALSE)
+  stop("Can't find ", raw, ". Run from the project root, or pass the path to a workbook.",
+       call. = FALSE)
 }
 dir.create("data", showWarnings = FALSE)
 

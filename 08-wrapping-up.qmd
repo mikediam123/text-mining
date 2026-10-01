@@ -33,7 +33,7 @@ Start from the question, not the technique.
 
 ## Working with student words
 
-The responses in this dataset are real students describing their lives. A few practices follow from that:
+The book's data are synthetic, but the real VCU CARES responses are students describing their lives, and you will work with data like that. A few practices follow:
 
 - Keep the raw data out of version control, as this project does, and carry only the variables you need.
 - Be careful quoting. A short, specific quote can identify someone even without a name, especially from a small program.

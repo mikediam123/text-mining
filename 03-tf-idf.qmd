@@ -128,6 +128,12 @@ tfidf_level |>
 
 We added `filter(n >= 5)`. Without it, TF-IDF's top words are dominated by words used once, by one student, in one level. That is a known weakness: **rare words get high idf**, even when rarity just means "a typo" or "a name." A minimum count is the standard guard.
 
+::: callout-note
+## In this synthetic data, the differences are noise
+
+Student level was assigned to answers at random when the synthetic data were generated, so graduate and undergraduate students do not truly talk about different things here. The chart still shows a "top ten" for each group, because TF-IDF always returns *something*. That is worth remembering with real data: a ranked list of distinctive words is not evidence that the groups differ. Read the words in context (below) and ask whether a story survives.
+:::
+
 ::: callout-warning
 ## Group sizes are very different
 
