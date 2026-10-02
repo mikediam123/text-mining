@@ -56,10 +56,6 @@ jobs:
       - name: Build the analysis file from the synthetic workbook
         run: Rscript R/01-prep-data.R
 
-      - name: TEMP diagnostic (manual runs only)
-        if: github.event_name == 'workflow_dispatch'
-        run: Rscript R/debug-lda.R
-
       - name: Render the book
         run: quarto render
 

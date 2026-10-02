@@ -113,19 +113,36 @@ dtm
 #| label: fit
 
 K <- 6
-lda <- LDA(dtm, k = K, control = list(seed = 664))
+
+# alpha controls how mixed each document is. We fix it at a small value so that
+# documents lean toward a few topics (see the note below for why this matters).
+lda_control <- list(seed = 664, alpha = 0.1, estimate.alpha = FALSE)
+
+lda <- LDA(dtm, k = K, control = lda_control)
 ```
 
 - `K <- 6` saves the number of topics under a name, so that we can change it in one place.
-- `LDA()` fits the model. The first argument is the matrix; `k` is the number of topics.
-- `control = list(seed = 664)` passes extra settings in a list. The `seed` matters: LDA starts from a random guess and can land in different places on different runs. Fixing the seed (see @sec-r-primer) makes your results reproducible.
+- `lda_control <- list(...)` bundles the model's settings in one place, so that we can reuse them later. `seed = 664` fixes the random starting point (see @sec-r-primer): LDA starts from a random guess and can land in different places on different runs, so fixing the seed makes your results reproducible. `alpha` and `estimate.alpha` are explained next.
+- `LDA()` fits the model. The first argument is the matrix; `k` is the number of topics; and `control` passes the settings.
+
+::: callout-warning
+## Why we set `alpha` by hand: a model that quietly fails
+
+**Alpha** controls how *mixed* each document is. A small alpha says "documents lean toward a few topics." A large alpha says "documents are an even blend of every topic."
+
+By default, `LDA()` *estimates* alpha from the data. On our short documents, that estimate ran away: when we tried it, the software chose an alpha of about 55. That is so large that every student came out as an almost perfectly even blend of all six topics (each topic about 17%, which is 1/6), and the six topic word lists were nearly interchangeable ("campus," "help," "support," "experience"). The model ran without any error or warning. It simply learned nothing.
+
+Fixing alpha at 0.1 (`alpha = 0.1, estimate.alpha = FALSE`) tells the model to expect documents that lean toward a few topics, and the topics then separate. You can see the change directly: with the default, the average share of each student's strongest topic was 0.17; with alpha fixed at 0.1 it is about 0.68.
+
+The lesson is general: **a topic model that runs is not a topic model that works.** Always check that the documents are not all identical mixtures (we do this below), and always read the topics.
+:::
 
 ::: callout-note
 ## Other options of `LDA()`
 
-- `method`: how the model is fitted. The default, `"VEM"`, is fast. The alternative, `"Gibbs"`, is slower but is often preferred when you want more careful results. Both estimate the same model.
-- `control = list(alpha = ...)`: a setting that governs how *mixed* each document is. A small `alpha` pushes each document toward one or two topics; a large one spreads it across many. By default the software estimates it for you, which is a good starting point.
-- `control = list(iter = ..., burnin = ...)` (for `"Gibbs"`): how many rounds of computation to run. More rounds give more stable results and take longer.
+- `method`: how the model is fitted. The default, `"VEM"`, is fast. The alternative, `"Gibbs"`, is slower but is often preferred for careful results. Both estimate the same model, and both need a sensible alpha: with Gibbs, the default alpha is `50 / K`, which for K = 6 is about 8.3, and we found it too large here as well. Add `alpha = 0.1` there too.
+- `alpha`: as above. Smaller values (0.01 to 0.5) give documents that lean toward fewer topics; larger values give blended documents. It is a judgment call, and worth trying a few values.
+- `iter` and `burnin` (for `"Gibbs"`): how many rounds of computation to run, and how many early rounds to throw away. More rounds give more stable results and take longer.
 :::
 
 ## The topics: beta
@@ -216,6 +233,15 @@ ggplot(dominant, aes(gamma)) +
 ```
 
 For each student (`group_by(resp_id)`), `slice_max(gamma, n = 1)` keeps just their strongest topic. The histogram then shows how big that strongest share usually is.
+
+```{r}
+#| label: collapse-check
+
+mean(dominant$gamma)   # average share of each student's strongest topic
+1 / K                  # what a completely blended, "collapsed" model would give
+```
+
+This is the check mentioned in the alpha note above. The first number is the average share of each student's strongest topic. The second is what you would get if every student were an even blend of all topics, which is the signature of a failed model. Our average is far above `1 / K`, so the documents do lean toward particular topics. If your own average is close to `1 / K`, the model has not found structure; try a smaller alpha.
 
 If the bulk of the bars sits far below 1, documents are genuinely mixed. If it piles up near 1, documents are cleanly single-topic. With short documents you will usually see more mixing than you expect, and "the dominant topic" can be a weak claim.
 
@@ -323,7 +349,7 @@ Fit several values of K and compare them by reading, not just by statistics.
 ```{r}
 #| label: multiple-k
 
-fits <- map(c(4, 6, 8, 10), \(k) LDA(dtm, k = k, control = list(seed = 664)))
+fits <- map(c(4, 6, 8, 10), \(k) LDA(dtm, k = k, control = lda_control))
 
 map_dfr(fits, \(m) tibble(k = m@k, loglik = as.numeric(logLik(m))))
 ```
@@ -333,7 +359,7 @@ This block introduces a way of repeating a step without copying and pasting.
 - `map(c(4, 6, 8, 10), \(k) LDA(...))` takes the list of values and runs the function on each one. The odd-looking `\(k) ...` is a tiny function written on the spot ("given `k`, fit an LDA with that many topics"). The result, `fits`, is a list of four fitted models.
 - `map_dfr(fits, \(m) tibble(...))` then goes through those models and, for each, builds a one-row table. `m@k` reads the number of topics stored inside the model (the `@` is how R reaches inside this kind of object), and `logLik(m)` is its **log-likelihood**, a score of how well the model fits the data. `map_dfr` stacks the four rows into one table.
 
-Log-likelihood improves every time you add topics, so it cannot choose K for you. Formal helpers exist: held-out **perplexity** (`topicmodels::perplexity()`, which scores the model on documents it did not train on) and coherence measures (the `ldatuning` package). They narrow the range, but the last step is always a judgment: does this set of topics tell a story I can defend, and that I can verify by reading?
+Log-likelihood is a fit score, but it does not pick K for you. In principle a model with more topics can always fit the training data at least as well, so the score tends to favor ever more topics, and it says nothing about whether the extra topics are *meaningful*. (The software's approximation can also wobble a little, so the numbers may not rise smoothly.) Compare the four values: if they barely differ, as they do here, the data are not pointing to any particular K. Formal helpers exist: held-out **perplexity** (`topicmodels::perplexity()`, which scores the model on documents it did not train on) and coherence measures (the `ldatuning` package). They narrow the range, but the last step is always a judgment: does this set of topics tell a story I can defend, and that I can verify by reading?
 
 ::: callout-tip
 ## A practical routine
