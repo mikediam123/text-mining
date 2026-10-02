@@ -164,6 +164,7 @@ top_terms <- beta |>
 ggplot(top_terms, aes(beta, reorder_within(term, beta, topic))) +
   geom_col() +
   scale_y_reordered() +
+  scale_x_continuous(n.breaks = 3) +   # fewer tick labels, so they do not collide in small panels
   facet_wrap(~ topic, scales = "free_y", ncol = 3) +
   labs(x = "Probability of word within topic", y = NULL)
 ```
@@ -173,6 +174,19 @@ ggplot(top_terms, aes(beta, reorder_within(term, beta, topic))) +
 - The chart draws one panel per topic (`facet_wrap(~ topic, ...)`). The option `ncol = 3` arranges the panels in three columns. `scales = "free_y"` lets each panel list its own words.
 
 **This is the step that requires you.** Read each panel and try to name it. Some will be crisp ("housing, rent, campus, apartments, expensive"). Others will be a grab-bag. A grab-bag topic is not a failure of reading; it is information that K or the preprocessing needs work.
+
+### Reading the chart from our run
+
+Each panel is one topic. The bars show how likely each word is *within that topic*, with the most probable word at the top. Here is how to read the six panels we got, and what each tells us.
+
+- **Topic 4 is the clearest, and it is about style, not subject.** Its top words are "says," "thinks," "wants," "mentioned," "positive," and "appreciates." Those are the third-person phrases interviewers used when they wrote down what a student said instead of quoting them. The model has found a real pattern, but a pattern in *how the notes were written*, not in what students talked about.
+- **Generic words dominate several topics.** "Campus" and "help" appear near the top of four of the six panels (topics 1, 2, 4, and 5). Topic 1 is the extreme case: "campus" is far ahead of every other word. Words that are common everywhere crowd the lists, which is the reason the chapter offers the distinctive-word list as a second view.
+- **Topics 3 and 6 are grab-bags.** Their bars are nearly flat: no word leads, and the words ("first, schools, experience, better, learn, place" in topic 3; "say, communication, people, give, left, mine, friend" in topic 6) do not add up to a subject you could name. A flat panel like this tells you the model has not found a theme there.
+- **Topics 2 and 5 sit in between**, with one or two leading words ("help," "campus") and a tail of generic ones.
+
+Notice also the horizontal scale. Even the most probable word in any topic accounts for only about 5% of that topic's words. That is normal: a topic spreads its probability over many words, so individual bars are short.
+
+If you were reporting these results, you would name topic 4 (with a caveat about what it is), and say honestly that the others are not clean themes. That is a legitimate and useful finding about the data and the settings, not a failure.
 
 ### Words that are common everywhere crowd the lists
 
@@ -247,6 +261,15 @@ This is the check mentioned in the alpha note above. The first number is the ave
 
 If the bulk of the bars sits far below 1, documents are genuinely mixed. If it piles up near 1, documents are cleanly single-topic. With short documents you will usually see more mixing than you expect, and "the dominant topic" can be a weak claim.
 
+**What the histogram shows in our run.** The horizontal axis is how much of a student's text belongs to their strongest topic, and the bar height is how many students fall in that range. The shape has two parts:
+
+- **A broad hump in the middle.** Most students peak between about 0.4 and 0.8, with the tallest bars near 0.5 to 0.6. For these students the strongest topic accounts for roughly half to two-thirds of their text, and the rest is spread over other topics. They are genuine blends.
+- **A tall spike at the far right.** Roughly 240 students, close to a fifth of the total, are almost entirely one topic (above 0.95). A small dip just before it (around 0.85 to 0.9) separates them from the hump.
+
+Notice what is *missing*: nothing falls below about 0.25. With six topics, the lowest possible value is 1/6 (about 0.17), which is the "completely blended" floor we compared against above. So the model is clearly leaning documents toward topics.
+
+The spike is probably a document-length effect. A student with very few words can easily be explained by a single topic, while a longer document draws on several. If you plan to report "the dominant topic" for each student, remember that for the students in the middle hump it describes only about half their text.
+
 ## Prevalence: how big is each topic?
 
 ```{r}
@@ -262,6 +285,10 @@ gamma |>
 ```
 
 `summarise(prevalence = mean(gamma))` averages gamma across all students, separately for each topic. The result is each topic's overall **prevalence**: roughly, the share of all the text that belongs to it. `factor(topic)` tells the chart to treat the topic numbers as labels rather than as quantities.
+
+**What the chart shows in our run.** The bars are sorted from the largest topic to the smallest. Topics 1 and 2 are the biggest, each covering about 20% of all the text. Topics 5, 3, and 6 follow at roughly 15 to 17%, and topic 4 is the smallest at about 12%. The topics are fairly even in size, with no single one dominating.
+
+Two cautions about reading prevalence. First, **bigger does not mean more important.** Topics 1 and 2 are the two whose top words were mostly generic ("campus," "help," "things"), so their size is partly because they absorb the common words that do not belong anywhere else. Large, generic topics are often catch-alls. Second, the smallest topic (4) is the one that is most clearly nameable (the note-taking style). A small topic can be the sharpest one.
 
 ## Always read the documents
 
@@ -325,6 +352,7 @@ dominant |>
   geom_col() +
   geom_vline(xintercept = 1, linetype = "dashed") +
   scale_y_reordered() +
+  scale_x_continuous(breaks = c(0, 1, 2)) +
   facet_wrap(~ topic, scales = "free_y", ncol = 2) +
   labs(x = "Lift over the overall rate (1 = no association)", y = NULL)
 ```
@@ -341,6 +369,18 @@ This is the longest block so far, but it follows one idea: for each LDA topic, w
 6. The chart draws the lifts as bars. `geom_vline(xintercept = 1, linetype = "dashed")` adds a dashed line at 1, where a code is exactly as common as usual.
 
 **Lift** is the key idea. A lift of 2 means the code is twice as common among this topic's students as in the data overall. A lift of 1 means no relationship. A topic with no codes above 1, or with odd ones, is a candidate for being an artifact.
+
+### Reading the chart from our run
+
+Each panel is an LDA topic, and the three bars are the interviewer codes most over-represented among that topic's students. The dashed line at 1 means "no association," and a bar that reaches 2 means the code is twice as common as usual.
+
+What the chart tells us is sobering, and that is the point of the check:
+
+- **Every bar is above 1, but only modestly.** Most lifts sit between about 1.2 and 1.8. The largest, in topic 4 (financial aid and health support), reach about 2. These are weak associations. If the topics were capturing the same themes the interviewers coded, we would expect some bars to reach well above 2.
+- **The largest lifts belong to rare codes.** "Staff development" and "faculty development" (topics 1 and 2) are among the least-used codes, so only a handful of students carry them. With so few students, a ratio can swing a lot, and the minimum of five students per combination does not fully protect against that.
+- **The pairings do not tell a coherent story.** Topic 4, for instance, is the note-taking-style topic, yet its strongest links are to financial aid and health support, which have nothing to do with its words. That is the signature of a topic that reflects *phrasing* more than *subject*.
+
+So the interviewers' codes give us no reason to trust these six topics as themes. This is the validation step doing its job: it protects you from reporting a tidy-looking topic list that does not correspond to anything else you know about the data. (Remember that the text here is synthetic and built from templates. With real interview data, you would hope to see stronger links, and if you did not, this chart is where you would find out.)
 
 ## How many topics?
 

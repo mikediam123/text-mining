@@ -205,12 +205,12 @@ A **regression** estimates how much an outcome changes when something else chang
 
 Each topic's results have an **intercept** (the expected topic share for undergraduates, the reference group) and a `levelGraduate` coefficient (how much higher or lower graduate students are). A coefficient of 0.03 means graduate students devote 3 percentage points more of their answers to that topic. Look at the **Estimate**, the **Std. Error**, and the p-value column. The p-value is the chance of seeing a difference this big if there were really none; small values (conventionally under 0.05) suggest a real difference.
 
-Here is what the first three topics showed. Topics 1 and 3 have coefficients near zero (0.001 and -0.004) with large p-values (0.95 and 0.79): no evidence of a difference. Topic 2 stands out. Graduate students are estimated to use it about 4 percentage points more (0.041, p = 0.002), which looks like a clear finding.
+Here is what the first three topics showed. Topics 1 and 3 have coefficients near zero (0.001 and -0.004) with large p-values (0.95 and 0.79): no evidence of a difference. Topic 2 stands out. Graduate students are estimated to use it about 4 percentage points more (0.041, p = 0.002), which looks like a clear finding. The plot below shows all eight topics, and a second topic turns out to stand out too.
 
 ::: callout-warning
 ## A false alarm, by construction
 
-In the synthetic data, student level was assigned at random, so there is **no real difference** between graduate and undergraduate students to find. A "significant" result for topic 2 is therefore a false alarm. This is exactly what the next warning predicts: when you test eight topics at once, something will occasionally look significant by chance. It is also the best argument for the habit this book keeps repeating. Before believing a topic-by-group difference, read the documents behind it, and ask whether the story makes sense and whether it would hold up in a different sample.
+In the synthetic data, student level was assigned at random, so there is **no real difference** between graduate and undergraduate students to find. A "significant" result for topic 2 (and, as the plot below shows, a borderline one for topic 8) is therefore a false alarm. This is exactly what the next warning predicts: when you test eight topics at once, something will occasionally look significant by chance. It is also the best argument for the habit this book keeps repeating. Before believing a topic-by-group difference, read the documents behind it, and ask whether the story makes sense and whether it would hold up in a different sample.
 :::
 
 Rather than read eight regression tables, plot the differences.
@@ -241,6 +241,18 @@ The options explained:
 - `xlab` sets the label of the horizontal axis. `labeltype = "custom"` with `custom.labels` lets us label each row "Topic 1," "Topic 2," and so on, instead of listing words. (`paste("Topic", 1:K)` builds those labels.)
 
 Read this the way you read any effect estimate: look at the **interval**, the horizontal line through each dot, which shows the range of plausible differences. If the line crosses zero, the data are consistent with no difference at all. Most intervals will cross zero, because we have fewer than 200 graduate students. A topic whose interval clearly excludes zero is a candidate finding. Go back and read the graduate and undergraduate documents for that topic before saying anything about it.
+
+### Reading the chart from our run
+
+Each row is a topic. The dot is the estimated difference in the share of a student's text (graduate minus undergraduate), and the line is its 95% interval. The dashed vertical line marks zero, "no difference." A dot to the right of it means graduate students use the topic more; to the left, undergraduates do. The whole horizontal range is small, from about -0.06 to +0.06, which means differences of at most a few percentage points.
+
+- **Six of the eight lines cross zero.** Topics 1, 3, 4, 5, 6, and 7 all have dots close to zero and lines that straddle it. For these there is no evidence of any difference. Topic 7's dot is a little to the left (about -0.013) but its line is wide, so it is well within the noise.
+- **Topic 2 sits to the right of zero.** The dot is at about +0.04, and the whole line (roughly +0.015 to +0.065) is right of the dashed line. Taken at face value, graduate students use topic 2 more.
+- **Topic 8 sits to the left of zero, barely.** The dot is at about -0.03, and the line (roughly -0.065 to -0.002) only just stays on the left side of zero. Taken at face value, undergraduates use this topic more. Topic 8 is the note-taking-style topic from earlier, which is exactly the kind of result that tempts a story ("graduate students were interviewed differently"). A line that *just* clears zero deserves extra skepticism.
+
+Both of those results are false alarms. Student level was assigned at random in this synthetic data, so there is nothing to find. Two of eight is a bit more than the roughly 0.4 you would expect by chance at the 5% level, but it is not out of the question, and it is a vivid illustration of why the "eight topics, eight tests" warning below matters. This chart looks like a finding. Reading the documents behind topics 2 and 8, and noticing that a plausible story is easy to invent, is what protects you from reporting it.
+
+A note on the picture itself: the labels are drawn next to the dots, so a label may touch the dashed line (as "Topic 2" does). That is cosmetic and comes from the plotting function.
 
 ::: callout-important
 ## Eight topics, eight tests
