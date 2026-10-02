@@ -105,7 +105,7 @@ dtm <- keep |> cast_dtm(document = resp_id, term = word, value = n)
 dtm
 ```
 
-`cast_dtm()` converts our long table into that grid. Its three options say which column holds the document (`resp_id`), the term (`word`), and the value to put in the cells (`n`, the count). Printing `dtm` shows its size and how sparse it is. "Sparsity" near 98% means 98% of the cells are zero.
+`cast_dtm()` converts our long table into that grid. Its three options say which column holds the document (`resp_id`), the term (`word`), and the value to put in the cells (`n`, the count). Printing `dtm` shows its size and how sparse it is: here, about 1,200 students (rows) by about 400 words (columns), and a "sparsity" of about 94%, which means 94% of the cells are zero.
 
 ## Fit the model
 
