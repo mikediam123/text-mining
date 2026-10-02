@@ -177,10 +177,18 @@ Repeat for each topic. A topic whose top documents do not hang together is not r
 #| fig-cap: "Expected topic proportions, with the top words of each topic."
 #| fig-height: 6
 
-plot(fit, type = "summary", n = 5, xlim = c(0, 0.4))
+plot(fit, type = "summary", n = 3, xlim = c(0, 0.4))
 ```
 
-This draws one line per topic: a dot showing the topic's average share of all the text, labeled with its top words. `n = 5` sets the number of words in each label, and `xlim` sets the horizontal range of the chart. (This chart uses R's basic plotting, not `ggplot2`, so it looks a little different from the others.)
+This draws one row per topic, sorted from the largest to the smallest. Each row has a horizontal line running from zero to the topic's expected share of all the text, and a label listing the topic's top words. `n = 3` sets the number of words in each label (we use three so that the labels fit; with more, the longest ones run off the edge of the chart), and `xlim` sets the horizontal range. (This chart uses R's basic plotting, not `ggplot2`, so it looks a little different from the others.)
+
+**What the chart shows in our run.** The horizontal axis is the **expected topic proportion**: the average share of each student's text that belongs to the topic. Read the end of each line against the axis.
+
+- **The topics are close to equal in size.** Seven of the eight lines end between about 0.12 and 0.14 (12 to 14%). With eight topics, an exactly even split would be 12.5%, so the model has divided the text into topics of similar weight, and no single topic dominates.
+- **The one clear exception is the smallest topic.** Topic 8 ("says, concerned, mentioned, wants, thinks") ends near 0.08, about 8% of the text. That is the note-taking-style topic, which comes only from the paper forms, a minority of the students, so a smaller share is just what we should expect.
+- **The order is a mild ranking, not a verdict.** Topic 4 is on top at roughly 0.14, followed by topics 1, 7, 2, 5, 6, and 3, all within a couple of percentage points of each other. Differences that small should not be over-interpreted.
+
+As with the LDA chart, *size is not importance*. A topic that is large because it collects generic words ("better, options, system, good" in topic 1) and a topic that is small because it is specific can both be useful. The point of this chart is orientation: it tells you how the text is divided before you look at the differences between groups.
 
 ## The payoff: topics by student level
 
