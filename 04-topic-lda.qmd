@@ -201,6 +201,8 @@ Reading it in stages:
 
 Compare these lists with the plot. Distinctive words usually make a topic easier to name; frequent words usually make it easier to defend. Look at both.
 
+Be aware that this measure has a known weakness: it rewards **rare words**, because a word that is almost never used anywhere can have a very high ratio in the one topic that uses it. You can see that here. The same technology words ("laptop," "loan," "wifi") appear in the lists for several different topics, which is a sign of a rare-word effect and not of four topics about technology. One topic stands out clearly, though: its words ("recommends," "expanding," "proposes," "lacking") belong to the third-person note-taking style of the paper forms rather than to a subject, much as in @sec-stm. Treat the lift list as a second opinion, and trust a topic only when the probable words, the distinctive words, and the strongest documents all point the same way.
+
 ## The documents: gamma
 
 `matrix = "gamma"` gives each document's mix of topics.
@@ -359,7 +361,7 @@ This block introduces a way of repeating a step without copying and pasting.
 - `map(c(4, 6, 8, 10), \(k) LDA(...))` takes the list of values and runs the function on each one. The odd-looking `\(k) ...` is a tiny function written on the spot ("given `k`, fit an LDA with that many topics"). The result, `fits`, is a list of four fitted models.
 - `map_dfr(fits, \(m) tibble(...))` then goes through those models and, for each, builds a one-row table. `m@k` reads the number of topics stored inside the model (the `@` is how R reaches inside this kind of object), and `logLik(m)` is its **log-likelihood**, a score of how well the model fits the data. `map_dfr` stacks the four rows into one table.
 
-Log-likelihood is a fit score, but it does not pick K for you. In principle a model with more topics can always fit the training data at least as well, so the score tends to favor ever more topics, and it says nothing about whether the extra topics are *meaningful*. (The software's approximation can also wobble a little, so the numbers may not rise smoothly.) Compare the four values: if they barely differ, as they do here, the data are not pointing to any particular K. Formal helpers exist: held-out **perplexity** (`topicmodels::perplexity()`, which scores the model on documents it did not train on) and coherence measures (the `ldatuning` package). They narrow the range, but the last step is always a judgment: does this set of topics tell a story I can defend, and that I can verify by reading?
+Log-likelihood is a fit score (higher, meaning closer to zero here, is better), but it does not pick K for you. A model with more topics can fit the data it was trained on at least as well, so the score tends to keep improving as K grows, and that is what you see: it rises from about −175,400 at four topics to about −173,200 at ten, with no sharp bend that would point to a particular K. It says nothing about whether the extra topics are *meaningful*. Formal helpers exist: held-out **perplexity** (`topicmodels::perplexity()`, which scores the model on documents it did not train on) and coherence measures (the `ldatuning` package). They narrow the range, but the last step is always a judgment: does this set of topics tell a story I can defend, and that I can verify by reading?
 
 ::: callout-tip
 ## A practical routine
