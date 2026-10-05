@@ -19,7 +19,7 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-MODEL_REVISION = None   # to freeze the exact model version, paste the commit hash this script prints
+MODEL_REVISION = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"   # exact model version used for this book; set to None to use the latest
 IN_PATH = Path("data/vcu_cares_long.csv")
 OUT_PATH = Path("data/embeddings_minilm.csv")
 

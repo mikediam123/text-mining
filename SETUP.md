@@ -52,7 +52,7 @@ Then, after Step 1:
 python py/embed.py
 ```
 
-The first run downloads the model (about 90 MB) and takes a minute or two. It writes `data/embeddings_minilm.csv`, which is gitignored like everything else in `data/`. After the first download the model works offline, and no text leaves your computer. The script prints the model's exact version; paste it into `MODEL_REVISION` in `py/embed.py` if you want to freeze it.
+The first run downloads the model (about 90 MB) and takes a minute or two. It writes `data/embeddings_minilm.csv`, which is gitignored like everything else in `data/`. After the first download the model works offline, and no text leaves your computer. The script pins the exact model version (`MODEL_REVISION` in `py/embed.py`) so results reproduce; set it to `None` to use the latest.
 
 ## Step 3: Render
 

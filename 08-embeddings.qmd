@@ -56,7 +56,7 @@ Here is what the script does.
 
 1. **Reads the answers** from the long file the prep script made (`pd.read_csv`). It keeps only two columns, the answer's ID and its text.
 2. **Straightens curly apostrophes**, exactly as `load_vcu()` does in R, so that both sides see the same text.
-3. **Loads the model** (`SentenceTransformer(MODEL_NAME)`). The first time, this downloads the model files and stores them on your computer. It also prints the exact model *version* (a "commit hash"). To make your analysis reproducible, you can paste that value into `MODEL_REVISION`, which freezes the version so that a future update to the model cannot silently change your results.
+3. **Loads the model** (`SentenceTransformer(MODEL_NAME, revision = MODEL_REVISION)`). The first time, this downloads the model files and stores them on your computer. The script names the exact model *version* to use (`MODEL_REVISION`, a "commit hash"), which freezes it so that a later update to the model cannot silently change your results. If you want to try the newest version, set `MODEL_REVISION` to `None`; the script prints the version it used either way, so you can record it.
 4. **Encodes every answer** (`model.encode(...)`). `batch_size = 64` processes 64 answers at a time, which is faster than one by one. `normalize_embeddings = True` rescales each vector to length 1, which is what lets a dot product act as cosine similarity.
 5. **Saves a table** with one row per answer: its `doc_id` and 384 columns named `e1` to `e384`.
 
