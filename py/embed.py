@@ -35,10 +35,13 @@ def main():
     texts = answers["text"].str.replace("[‘’]", "'", regex=True).tolist()
 
     model = SentenceTransformer(MODEL_NAME, revision=MODEL_REVISION)
+
+    # Print the exact model version (a "commit hash") so it can be recorded or pinned
     try:
-        print("Model:", MODEL_NAME, "| revision:", model[0].auto_model.config._commit_hash)
+        from huggingface_hub import model_info
+        print("Model:", MODEL_NAME, "| revision:", MODEL_REVISION or model_info(MODEL_NAME).sha)
     except Exception:
-        print("Model:", MODEL_NAME)
+        print("Model:", MODEL_NAME, "| revision: (could not look up)")
 
     # normalize_embeddings=True rescales each vector to length 1, which makes the
     # dot product of two answers equal to their cosine similarity

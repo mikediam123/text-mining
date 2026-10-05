@@ -24,7 +24,7 @@ A few terms you will see:
 
 Recall the limits of word counts from earlier chapters. Two answers can describe the same thing in different words ("my advisor was helpful" and "the counselor really supported me"), and a word-count model sees little in common. An embedding places both answers close together, because the pretrained model learned that these words appear in similar contexts.
 
-This matters most when you have **few labeled examples**. A word-count model must learn from scratch that "advisor," "counselor," and "mentor" all point toward the same topic, which takes many examples. An embedding already contains that knowledge, so the lasso can learn the topic from far fewer examples. Learning from a small number of labeled examples is called **few-shot learning**, and we test it directly below.
+This should matter most when you have **few labeled examples**. A word-count model must learn from scratch that "advisor," "counselor," and "mentor" all point toward the same topic, which takes many examples. An embedding already contains that knowledge, so the lasso may be able to learn the topic from fewer examples. Learning from a small number of labeled examples is called **few-shot learning**, and we test the idea directly below. (It turns out to be partly true.)
 
 ## About the model
 
@@ -165,7 +165,7 @@ tibble(features = c("TF-IDF (word counts)", "MiniLM embeddings"),
 - `lasso_probs()` fits the lasso on the training answers and returns the predicted probability for each test answer. It is the same `cv.glmnet()` fit as in @sec-supervised, wrapped in a function. We call it once with each kind of features.
 - `auc()` scores each set of predictions. AUC is 0.5 for guessing and 1.0 for perfect ranking (see @sec-supervised).
 
-The TF-IDF number is the same one you saw in @sec-supervised, which is a good check that we are comparing like with like.
+The TF-IDF number is the same one you saw in @sec-supervised, which is a good check that we are comparing like with like. For this topic the embeddings scored `r round(auc(y_test, p_embed), 2)` against `r round(auc(y_test, p_tfidf), 2)` for word counts, so they did slightly *worse*. One topic can be a fluke, which is why we look at all of them next.
 
 ::: callout-note
 ## Why the embedding fit has two extra options
@@ -288,18 +288,46 @@ ggplot() +
 
 The horizontal axis is the number of labeled training answers, on a log scale (each tick is roughly double the last). The vertical axis is test AUC; the dashed line at 0.5 is chance. Each thin line is one topic, and the thick line is the average across topics. The embeddings are teal and the word counts are gold.
 
-## What to take from this
+```{r}
+#| label: summary-numbers
+#| echo: false
 
-Read your own results against the three questions this chapter set out to answer.
+# Numbers quoted in the text below, computed from the tables above so they cannot drift
+n_better  <- sum(compare$difference > 0)
+n_topics  <- nrow(compare)
+mean_diff <- mean(compare$difference)
+gap <- curve_mean |>
+  pivot_wider(names_from = features, values_from = auc) |>
+  mutate(gap = embeddings - tfidf)
+g <- function(size) round(gap$gap[gap$n == size], 2)
+auc_at <- function(size, feature) round(gap[[feature]][gap$n == size], 2)
+big_loss <- compare |> slice_min(difference, n = 2)
+```
 
-1. **Do embeddings beat word counts overall?** Look at the table and the scatter plot above. Count the topics that sit above the diagonal, and notice how big the gaps are.
-2. **Do they help most with few labeled examples?** In the learning curve, compare the two thick lines at the left (small samples) with the right (all the training data). If embeddings are better at the left and the gap closes at the right, the few-shot idea holds.
-3. **How low can the number of examples go?** Find where each line leaves the dashed chance line. That is roughly how many labeled answers each approach needs before it learns anything.
+## What the results show
+
+Here is what the comparison told us in our run. The numbers below are computed from the tables above.
+
+### With all the training data, embeddings did not win
+
+Embeddings scored higher than word counts on `r n_better` of the `r n_topics` topics, and on average were `r abs(round(mean_diff, 2))` AUC *lower*. Most of the differences are small, under about 0.04. Treat those as ties: each topic's AUC comes from a single split of students with only 20 to 75 true cases, so gaps of a few hundredths are within noise.
+
+The two largest gaps both favor word counts: `r big_loss$topic[1]` by `r abs(round(big_loss$difference[1], 2))` AUC and `r big_loss$topic[2]` by `r abs(round(big_loss$difference[2], 2))`. Gaps that large may be real. A plausible reason is that those topics are signaled by distinctive words that word counts catch directly, but we have not tested that.
+
+### With a few hundred labeled answers, they helped
+
+The learning curve is where embeddings earned their keep, though not at the smallest sizes.
+
+- **Below about 100 answers, neither learned much.** With 40 and 80 answers the embeddings averaged `r auc_at(40, "embeddings")` and `r auc_at(80, "embeddings")` (barely above the 0.5 chance line), and word counts sat at exactly 0.5. The word-count figure is partly an artifact of our rule that a word must appear in at least five training answers, which leaves almost no vocabulary to work with when you have 40 answers. It is not a hard limit of word counts.
+- **From about 150 to 300 answers, embeddings led.** At 160 answers they were ahead by about `r g(160)` AUC, and at 320 by about `r g(320)`.
+- **By about 640 answers the advantage was gone**, and with all 1,529 training answers the two were essentially tied (`r auc_at(1529, "embeddings")` against `r auc_at(1529, "tfidf")`).
+
+So the few-shot idea is partly supported. Embeddings helped most in the middle range of a few hundred labeled answers, which happens to be a realistic number for a lab to code by hand. They did not rescue us when almost no labels were available, and they gave no advantage once labels were plentiful. Remember that this is an average over three topics and four random samples per size, so the exact numbers will wiggle if you change the seed.
 
 ::: callout-warning
 ## What synthetic data can and cannot show here
 
-The text in this book's data was generated from short phrase templates, so it is unusually clean and repetitive. That is the setting where simple word counts do *well*, because the same words really do signal the same topic, and it leaves little for an embedding to add. Real interview answers are messier: students say the same thing in many different ways, which is exactly where embeddings are expected to pull ahead. So do not conclude from our numbers that embeddings never help. They show you how to run the comparison and read it; the comparison on real data is the one that matters.
+The text in this book's data was generated from short phrase templates, so it is unusually clean and repetitive. That is the setting where simple word counts do *well*, because the same words really do signal the same topic, and it leaves little for an embedding to add. That fits what we saw: a tie overall, with an edge only in the middle of the learning curve. Real interview answers are messier: students say the same thing in many different ways, which is exactly where embeddings are expected to pull ahead. So do not conclude from our numbers that embeddings do not help. They show you how to run the comparison and read it; the comparison on real data is the one that matters.
 
 There is also a ceiling that no model can pass. Some of the interviewers' codes are not reflected in the words of the answer, which is label noise (see @sec-supervised). A better model cannot find signal that is not there.
 :::
@@ -310,7 +338,7 @@ There is also a ceiling that no model can pass. Some of the interviewers' codes 
 |---|---|---|
 | Setup | R only | Adds one Python step and a model download |
 | Speed | Very fast | Slower to prepare (embedding), then similar |
-| Needs lots of labels | More | Often fewer |
+| Labeled examples needed | Struggled below a few hundred | Led at 150 to 300 in our run; neither learned much below about 100 |
 | Handles different wording | Poorly | Better |
 | Can you read why it predicts a topic? | Yes: the lasso keeps named words | No: the 384 numbers have no names |
 
@@ -321,5 +349,6 @@ The last row is a real cost. With word counts, the lasso hands you a list of wor
 - An **embedding** turns a text into a list of numbers so that similar meanings land close together. A pretrained model has learned this from huge amounts of text.
 - **MiniLM** is small enough to run on your own computer, with no account, fee, or data leaving the machine. It is created once with a short Python script, and the rest happens in R.
 - Using embeddings as features in the same lasso lets us compare directly with word counts, on the same held-out students.
+- In our run the two **tied** with all the training data. Embeddings led when there were a few hundred labeled answers, and neither learned much below about 100.
 - A **learning curve** shows how performance depends on the number of labeled examples, which is how you test the **few-shot** idea.
-- Embeddings cost interpretability, and on clean synthetic text their advantage may be small. Run the comparison on your own data before choosing.
+- Embeddings cost interpretability, and on clean synthetic text their advantage is small. Run the comparison on your own data before choosing.
