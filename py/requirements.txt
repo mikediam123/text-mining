@@ -1,0 +1,7 @@
+# Python packages for Chapter 8 (embeddings). Only that chapter needs Python.
+# Install PyTorch first. The CPU-only build is much smaller than the default one:
+#   python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+# then:
+#   python -m pip install -r py/requirements.txt
+sentence-transformers
+pandas

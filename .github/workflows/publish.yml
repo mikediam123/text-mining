@@ -46,6 +46,7 @@ jobs:
             any::ggraph
             any::igraph
             any::rsample
+            any::ggrepel
             any::rmarkdown
             any::knitr
             any::downlit
@@ -56,17 +57,39 @@ jobs:
       - name: Build the analysis file from the synthetic workbook
         run: Rscript R/01-prep-data.R
 
+      # Chapter 8: embeddings from a small pretrained model, computed on the runner's CPU.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: py/requirements.txt
+
+      - name: Install Python packages (CPU-only PyTorch)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r py/requirements.txt
+
+      - name: Cache the embedding model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-minilm-${{ hashFiles('py/embed.py') }}
+
+      - name: Create the embeddings (MiniLM)
+        run: python py/embed.py
+
       - name: Render the book
         run: quarto render
 
       # Manual runs only: print the rendered text of the topic-model chapters into the
       # log so their output can be reviewed without downloading the site.
-      - name: Print rendered topic-model chapters (manual runs only)
+      - name: Print rendered model chapters (manual runs only)
         if: github.event_name == 'workflow_dispatch'
         run: |
           python3 - <<'PY'
           import re, html
-          for f in ["docs/04-topic-lda.html", "docs/05-topic-stm.html"]:
+          for f in ["docs/04-topic-lda.html", "docs/05-topic-stm.html", "docs/08-embeddings.html"]:
               t = open(f, encoding="utf-8").read()
               m = re.search(r"<main.*?</main>", t, re.S).group(0)
               m = re.sub(r"<style.*?</style>|<script.*?</script>|<svg.*?</svg>|<img[^>]*>", "", m, flags=re.S)

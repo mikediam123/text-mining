@@ -1,0 +1,325 @@
+# Embeddings: Using a Pretrained Language Model {#sec-embeddings}
+
+**Data for this chapter:** `data/vcu_cares_long.csv` and `data/embeddings_minilm.csv`, the latter built by `py/embed.py`
+
+In @sec-supervised we taught a model to predict the interviewers' topic codes from word counts. That worked reasonably well, but it has a built-in weakness: to a word-count model, "advisor" and "counselor" are as unrelated as "advisor" and "parking." It only knows about the exact words it saw in training.
+
+A **pretrained language model** has already read an enormous amount of text, and from it has learned which words and phrases are used in similar ways. We can borrow that knowledge. This chapter shows how to turn each answer into a list of numbers that captures its *meaning*, and then to use those numbers in the same lasso model as before.
+
+By the end of this chapter you will be able to explain what an embedding is, create embeddings with a small model that runs on your own computer, use them to predict topic codes, and judge when they help and when they do not.
+
+## What is an embedding?
+
+An **embedding** is a list of numbers that represents a piece of text. You can think of it as the text's *address in a map of meaning*. Texts that mean similar things get addresses that are close together, and texts that mean different things get addresses far apart.
+
+A map of a city needs two numbers (latitude and longitude) to place a building. A map of meaning needs many more, because meaning has many dimensions. The model we use, **MiniLM**, uses **384** numbers for every answer. No single number has a human-readable meaning (there is no "advising dimension"). What matters is the pattern across all 384, and how close two patterns are.
+
+A few terms you will see:
+
+- **Vector:** just a list of numbers. An answer's embedding is a vector of length 384.
+- **Dimension:** one position in that list. We say the embeddings have 384 dimensions.
+- **Cosine similarity:** a score for how close two vectors point in the same direction, from -1 to 1. High means similar meaning. When vectors have been scaled to length 1, as ours are, cosine similarity is just the *dot product*: multiply the numbers position by position and add them up.
+
+## Why this might help
+
+Recall the limits of word counts from earlier chapters. Two answers can describe the same thing in different words ("my advisor was helpful" and "the counselor really supported me"), and a word-count model sees little in common. An embedding places both answers close together, because the pretrained model learned that these words appear in similar contexts.
+
+This matters most when you have **few labeled examples**. A word-count model must learn from scratch that "advisor," "counselor," and "mentor" all point toward the same topic, which takes many examples. An embedding already contains that knowledge, so the lasso can learn the topic from far fewer examples. Learning from a small number of labeled examples is called **few-shot learning**, and we test it directly below.
+
+## About the model
+
+**MiniLM** (`all-MiniLM-L6-v2`) is a small *transformer*, the kind of neural network behind modern language models. It has about 22 million adjustable parameters, which is tiny by today's standards (the chat-style language models you may have heard of have thousands of times more). That is why it is a good teaching choice:
+
+- It is **small**: about 90 MB to download.
+- It is **fast**: embedding all of our answers takes about a minute on an ordinary computer, with no special graphics hardware.
+- It runs **locally**. Nothing is sent to a company's server, and no account, key, or fee is involved.
+
+::: callout-important
+## Your text stays on your computer
+
+The only network step is the first-time download of the model files, which contain no data about your answers. After that the model works offline. This is a major difference from using a hosted chat service, where every answer would be sent to an outside company. If you work with real student responses, running a model locally keeps the text where it belongs. (Check that your own approvals cover using a model to code the data at all, which is a separate question.)
+:::
+
+## Step 1: Create the embeddings
+
+Embedding is done in a short Python script, because the pretrained models are distributed in Python. You run it once, and it saves a file that the rest of the chapter reads in R. This is the only Python in the book.
+
+```{r}
+#| label: show-script
+#| echo: false
+#| results: asis
+
+cat("```python\n", paste(readLines("py/embed.py"), collapse = "\n"), "\n```\n", sep = "")
+```
+
+Here is what the script does.
+
+1. **Reads the answers** from the long file the prep script made (`pd.read_csv`). It keeps only two columns, the answer's ID and its text.
+2. **Straightens curly apostrophes**, exactly as `load_vcu()` does in R, so that both sides see the same text.
+3. **Loads the model** (`SentenceTransformer(MODEL_NAME)`). The first time, this downloads the model files and stores them on your computer. It also prints the exact model *version* (a "commit hash"). To make your analysis reproducible, you can paste that value into `MODEL_REVISION`, which freezes the version so that a future update to the model cannot silently change your results.
+4. **Encodes every answer** (`model.encode(...)`). `batch_size = 64` processes 64 answers at a time, which is faster than one by one. `normalize_embeddings = True` rescales each vector to length 1, which is what lets a dot product act as cosine similarity.
+5. **Saves a table** with one row per answer: its `doc_id` and 384 columns named `e1` to `e384`.
+
+To run it, install the Python packages once (see `SETUP.md`), and then, from the project folder:
+
+```bash
+python py/embed.py
+```
+
+## Step 2: Load the embeddings into R
+
+```{r}
+#| label: setup
+
+source("R/helpers.R")
+source("R/classification.R")
+
+vcu <- load_vcu()
+
+if (!file.exists("data/embeddings_minilm.csv")) {
+  stop("Can't find data/embeddings_minilm.csv. Run  python py/embed.py  first. See SETUP.md.",
+       call. = FALSE)
+}
+emb <- read_csv("data/embeddings_minilm.csv", show_col_types = FALSE)
+
+dim(emb)
+```
+
+- `source("R/classification.R")` loads the functions from @sec-supervised (building the TF-IDF features, the lasso, AUC) so that we can reuse them. They are the same functions, saved in a file.
+- `read_csv()` reads the embeddings. The result has one row per answer and 385 columns: `doc_id` plus the 384 numbers.
+
+### A look at "closeness"
+
+To see what the numbers capture, pick an answer and find the five answers whose embeddings are closest to it.
+
+```{r}
+#| label: neighbors
+
+# Look up each answer's embedding by its ID, and keep the numbers as a matrix
+embed_matrix <- function(d) as.matrix(emb[match(d$doc_id, emb$doc_id), -1])
+e_all <- embed_matrix(vcu)
+
+set.seed(664)
+i <- sample(nrow(vcu), 1)
+
+# With length-1 vectors, the dot product is the cosine similarity
+similarity <- as.numeric(e_all %*% e_all[i, ])
+
+closest <- tibble(text = vcu$text, similarity = similarity) |>
+  slice(-i) |>
+  slice_max(similarity, n = 5, with_ties = FALSE)
+
+# the chosen answer first (similarity 1 with itself), then its five closest neighbors
+bind_rows(tibble(text = vcu$text[i], similarity = 1), closest)
+```
+
+- `embed_matrix()` is a small function of ours: for any set of answers it looks up their rows in the embedding table and returns just the numbers as a matrix. `match()` finds each answer's row by its ID.
+- `sample(nrow(vcu), 1)` picks one answer at random (`set.seed()` makes it the same one each time), and `i` is its position.
+- `e_all %*% e_all[i, ]` is the key line. The `%*%` symbol means matrix multiplication; here it takes the dot product of *every* answer's vector with the chosen answer's vector, which gives a similarity score for all answers at once.
+- `slice(-i)` drops the chosen answer itself from the candidates, and `slice_max()` keeps the five with the highest similarity. The last line puts the chosen answer on top (similarity 1, by definition, with itself), followed by its five closest neighbors, most similar first.
+
+Read the neighbors. They should be answers that talk about the same kind of thing. This is the idea behind the whole chapter: closeness in the embedding space tracks closeness in meaning, so a model that learns from the embeddings can generalize across different wordings.
+
+## Step 3: The same task, with embeddings
+
+We now predict the topic codes exactly as in @sec-supervised, with the **same train and test students** (the helper function uses the same seed), but with embeddings as the features in place of TF-IDF.
+
+```{r}
+#| label: split
+
+labeled <- make_labeled(vcu)
+sp      <- split_by_student(labeled)
+train   <- sp$train
+test    <- sp$test
+
+c(train = nrow(train), test = nrow(test))
+
+# Features, two ways
+tf      <- tfidf_features(train, test)     # word-count features (Chapter 7)
+e_train <- embed_matrix(train)             # embedding features
+e_test  <- embed_matrix(test)
+```
+
+- `make_labeled()` and `split_by_student()` repeat the first two steps of @sec-supervised: keep the answers that have topic codes, then hold out 20% of *students* for testing. Because the seed is the same, the train and test sets are identical to those in the last chapter.
+- `tfidf_features()` builds the word-count (TF-IDF) matrices, as before.
+- `embed_matrix()` builds the embedding matrices for the same answers.
+
+Now the target from before, "Student activities":
+
+```{r}
+#| label: one-topic
+
+target <- "Student activities"
+y_train <- has_topic(train, target)
+y_test  <- has_topic(test,  target)
+
+# lambda.min.ratio and nlambda shorten the penalty path (explained below)
+p_tfidf <- lasso_probs(tf$x_train, y_train, tf$x_test)
+p_embed <- lasso_probs(e_train,    y_train, e_test, lambda.min.ratio = 0.01, nlambda = 50)
+
+tibble(features = c("TF-IDF (word counts)", "MiniLM embeddings"),
+       auc = c(auc(y_test, p_tfidf), auc(y_test, p_embed)))
+```
+
+- `has_topic()` is another helper: for each answer it says whether the target topic is among its codes (`TRUE` or `FALSE`).
+- `lasso_probs()` fits the lasso on the training answers and returns the predicted probability for each test answer. It is the same `cv.glmnet()` fit as in @sec-supervised, wrapped in a function. We call it once with each kind of features.
+- `auc()` scores each set of predictions. AUC is 0.5 for guessing and 1.0 for perfect ranking (see @sec-supervised).
+
+The TF-IDF number is the same one you saw in @sec-supervised, which is a good check that we are comparing like with like.
+
+::: callout-note
+## Why the embedding fit has two extra options
+
+`lambda.min.ratio = 0.01` and `nlambda = 50` tell `cv.glmnet()` to try fewer, and larger, penalty values. With 384 dense columns the default search over very small penalties is slow and rarely changes the answer: in our tests it gave essentially the same AUC about ten times faster. The TF-IDF fit keeps the defaults so that it matches @sec-supervised.
+:::
+
+### All the common topics
+
+One topic can be a fluke. Here is the comparison for every topic with enough examples.
+
+```{r}
+#| label: all-topics
+
+topic_counts <- labeled |>
+  unnest(topics) |>
+  count(topics, sort = TRUE)
+
+common_topics <- setdiff(topic_counts |> filter(n >= 80) |> pull(topics), "Other")
+
+compare <- map_dfr(common_topics, \(tp) {
+  y_tr <- has_topic(train, tp)
+  y_te <- has_topic(test,  tp)
+  tibble(topic      = tp,
+         prevalence = mean(y_te),
+         tfidf      = auc(y_te, lasso_probs(tf$x_train, y_tr, tf$x_test)),
+         embeddings = auc(y_te, lasso_probs(e_train, y_tr, e_test,
+                                            lambda.min.ratio = 0.01, nlambda = 50)))
+}) |>
+  mutate(difference = embeddings - tfidf)
+
+compare |>
+  arrange(desc(difference)) |>
+  mutate(across(where(is.numeric), \(x) round(x, 2)))
+```
+
+For each common topic, `map_dfr()` runs the whole recipe (the same as the helper-based `fit_topic()` of @sec-supervised) and records the test AUC for each kind of feature. `difference` is embeddings minus TF-IDF, so a positive number means the embeddings did better. The table is sorted so that the topics where embeddings help most are at the top.
+
+```{r}
+#| label: fig-compare
+#| fig-cap: "Test-set AUC for each topic, with TF-IDF features and with MiniLM embeddings. Points above the diagonal favor embeddings."
+#| fig-height: 5.5
+
+ggplot(compare, aes(tfidf, embeddings)) +
+  geom_abline(linetype = "dashed") +
+  geom_point(size = 3, color = vcu_teal) +
+  ggrepel::geom_text_repel(aes(label = topic), size = 3, max.overlaps = 20) +
+  coord_equal(xlim = c(0.6, 1), ylim = c(0.6, 1)) +
+  labs(x = "AUC with TF-IDF word counts", y = "AUC with MiniLM embeddings")
+```
+
+Each dot is one topic. The dashed diagonal is where both methods score the same. A dot **above** the line means the embeddings did better on that topic; **below** means the word counts did.
+
+## Step 4: How many labeled examples do you need?
+
+The claim in the introduction was that embeddings help most when labeled examples are scarce. We can test that directly with a **learning curve**: train on smaller and smaller samples of the training answers, and see how the score changes.
+
+```{r}
+#| label: learning-curve
+
+learning_curve <- function(topic, sizes, reps = 4) {
+  y_all <- has_topic(train, topic)
+  y_te  <- has_topic(test,  topic)
+
+  # every size is repeated reps times with different random samples (the full set once)
+  grid <- expand.grid(n = sizes, rep = seq_len(reps)) |>
+    filter(!(n >= nrow(train) & rep > 1))
+
+  pmap_dfr(grid, \(n, rep) {
+    set.seed(1000 * rep + n)
+    idx <- if (n >= nrow(train)) seq_len(nrow(train)) else sample(nrow(train), n)
+    y <- y_all[idx]
+    if (sum(y) < 5 || sum(!y) < 5) return(tibble())   # too few examples of one kind to fit
+
+    tfi <- tfidf_features(train[idx, ], test)
+    tibble(topic = topic, n = n, rep = rep,
+           tfidf      = suppressWarnings(auc(y_te, lasso_probs(tfi$x_train, y, tfi$x_test))),
+           embeddings = suppressWarnings(auc(y_te, lasso_probs(e_train[idx, ], y, e_test,
+                                                              lambda.min.ratio = 0.01, nlambda = 50))))
+  })
+}
+
+sizes  <- c(40, 80, 160, 320, 640, nrow(train))
+topics <- c("Student activities", "Student support services", "Having a sense of belonging")
+
+curve <- map_dfr(topics, learning_curve, sizes = sizes) |>
+  pivot_longer(c(tfidf, embeddings), names_to = "features", values_to = "auc")
+
+curve |>
+  group_by(features, n) |>
+  summarise(mean_auc = round(mean(auc, na.rm = TRUE), 3), .groups = "drop") |>
+  pivot_wider(names_from = features, values_from = mean_auc)
+```
+
+How this works:
+
+- `learning_curve()` is a function of ours. For a given topic, it draws a random sample of `n` training answers, fits both models on just that sample, and scores them on the *same* test set every time. It does this at several sample sizes, and repeats each size four times with different random samples (`reps = 4`), because a single small sample can be unrepresentative.
+- `if (sum(y) < 5 || sum(!y) < 5) return(tibble())` skips a sample that contains fewer than five examples of "yes" or of "no": the model cannot learn from nothing.
+- We run it for three common topics, then stack the results and pivot them into a table of average AUC at each size.
+
+```{r}
+#| label: fig-curve
+#| fig-cap: "Test-set AUC as the number of labeled training answers grows. Thin lines are individual topics; thick lines are the average."
+#| fig-height: 5
+
+curve_mean <- curve |>
+  group_by(features, n) |>
+  summarise(auc = mean(auc, na.rm = TRUE), .groups = "drop")
+
+ggplot() +
+  geom_line(data = curve |> group_by(topic, features, n) |> summarise(auc = mean(auc, na.rm = TRUE), .groups = "drop"),
+            aes(n, auc, color = features, group = interaction(topic, features)),
+            linewidth = 0.4, alpha = 0.5) +
+  geom_line(data = curve_mean, aes(n, auc, color = features), linewidth = 1.4) +
+  geom_hline(yintercept = 0.5, linetype = "dashed") +
+  scale_x_log10(breaks = c(40, 80, 160, 320, 640, 1500)) +
+  scale_color_manual(values = c(tfidf = vcu_gold, embeddings = vcu_teal)) +
+  labs(x = "Labeled training answers (log scale)", y = "AUC on held-out students", color = NULL)
+```
+
+The horizontal axis is the number of labeled training answers, on a log scale (each tick is roughly double the last). The vertical axis is test AUC; the dashed line at 0.5 is chance. Each thin line is one topic, and the thick line is the average across topics. The embeddings are teal and the word counts are gold.
+
+## What to take from this
+
+Read your own results against the three questions this chapter set out to answer.
+
+1. **Do embeddings beat word counts overall?** Look at the table and the scatter plot above. Count the topics that sit above the diagonal, and notice how big the gaps are.
+2. **Do they help most with few labeled examples?** In the learning curve, compare the two thick lines at the left (small samples) with the right (all the training data). If embeddings are better at the left and the gap closes at the right, the few-shot idea holds.
+3. **How low can the number of examples go?** Find where each line leaves the dashed chance line. That is roughly how many labeled answers each approach needs before it learns anything.
+
+::: callout-warning
+## What synthetic data can and cannot show here
+
+The text in this book's data was generated from short phrase templates, so it is unusually clean and repetitive. That is the setting where simple word counts do *well*, because the same words really do signal the same topic, and it leaves little for an embedding to add. Real interview answers are messier: students say the same thing in many different ways, which is exactly where embeddings are expected to pull ahead. So do not conclude from our numbers that embeddings never help. They show you how to run the comparison and read it; the comparison on real data is the one that matters.
+
+There is also a ceiling that no model can pass. Some of the interviewers' codes are not reflected in the words of the answer, which is label noise (see @sec-supervised). A better model cannot find signal that is not there.
+:::
+
+## Choosing between the two
+
+| | TF-IDF + lasso | Embeddings + lasso |
+|---|---|---|
+| Setup | R only | Adds one Python step and a model download |
+| Speed | Very fast | Slower to prepare (embedding), then similar |
+| Needs lots of labels | More | Often fewer |
+| Handles different wording | Poorly | Better |
+| Can you read why it predicts a topic? | Yes: the lasso keeps named words | No: the 384 numbers have no names |
+
+The last row is a real cost. With word counts, the lasso hands you a list of words ("events," "clubs") that you can read and check. With embeddings, the model's reasons are spread over 384 unnamed numbers. When you must be able to explain and audit a prediction, that interpretability may be worth more than a small gain in accuracy.
+
+## Summary
+
+- An **embedding** turns a text into a list of numbers so that similar meanings land close together. A pretrained model has learned this from huge amounts of text.
+- **MiniLM** is small enough to run on your own computer, with no account, fee, or data leaving the machine. It is created once with a short Python script, and the rest happens in R.
+- Using embeddings as features in the same lasso lets us compare directly with word counts, on the same held-out students.
+- A **learning curve** shows how performance depends on the number of labeled examples, which is how you test the **few-shot** idea.
+- Embeddings cost interpretability, and on clean synthetic text their advantage may be small. Run the comparison on your own data before choosing.

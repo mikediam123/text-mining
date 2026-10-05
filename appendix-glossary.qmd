@@ -20,6 +20,8 @@ Plain-language definitions of the terms used in this book, in alphabetical order
 
 **Confusion matrix.** A 2×2 table counting a classifier's hits, misses, false alarms, and correct rejections (@sec-supervised).
 
+**Cosine similarity.** A score from -1 to 1 for how closely two vectors point in the same direction. For embeddings, high means similar meaning. When vectors are scaled to length 1, it equals their dot product (@sec-embeddings).
+
 **Covariate.** A characteristic of a document or person that you want to relate to the outcome, such as a student's level (@sec-stm).
 
 **Cross-validation.** Estimating how well a model will do on new data by repeatedly training on part of the training data and testing on the rest. `cv.glmnet()` uses it to pick the penalty strength (@sec-supervised).
@@ -28,13 +30,19 @@ Plain-language definitions of the terms used in this book, in alphabetical order
 
 **Data leakage.** Information from the test data accidentally influencing the model, which makes test results look better than they would be on genuinely new data (@sec-supervised).
 
+**Dimension.** One position in a vector. MiniLM's embeddings have 384 dimensions (@sec-embeddings).
+
 **Document.** Whatever unit of text you decide to treat as one piece: an answer, a student, a question. Your choice shapes every result (@sec-data).
 
 **Document-term matrix.** A grid with one row per document and one column per word, with word counts in the cells (@sec-lda).
 
+**Embedding.** A list of numbers that represents a text so that texts with similar meanings get similar numbers. It is like an address on a map of meaning (@sec-embeddings).
+
 **F1.** A single score that balances precision and recall. It is low whenever either one is low (@sec-supervised).
 
 **Factor.** A column with a fixed set of allowed categories in a stated order (@sec-data, @sec-stm).
+
+**Few-shot learning.** Learning a task from only a small number of labeled examples. Pretrained models often make this possible (@sec-embeddings).
 
 **FREX.** A way of ranking a topic's words by how both *frequent* and *exclusive* to the topic they are. Useful for naming topics (@sec-stm).
 
@@ -48,17 +56,19 @@ Plain-language definitions of the terms used in this book, in alphabetical order
 
 **Label noise.** Errors or disagreement in the human-assigned labels that a supervised model learns from. It limits how well any model can do (@sec-supervised).
 
+**Lambda.** The strength of the penalty in a regularized regression. Chosen by cross-validation (@sec-supervised).
+
 **Lasso.** A regularized regression that shrinks most coefficients all the way to zero, leaving a short list of important words (@sec-supervised).
 
 **LDA (Latent Dirichlet Allocation).** The most common topic model. It describes each document as a mix of topics and each topic as a list of words (@sec-lda).
+
+**Learning curve.** A chart of how a model's performance changes as it is given more training examples. Used to see how many labeled examples a method needs (@sec-embeddings).
 
 **Lexicon.** A word list with labels attached, such as which words are positive or negative, or which words are stop words (@sec-tokens, @sec-sentiment).
 
 **Lift.** How many times more common something is in one group than overall. 1 means no difference; 2 means twice as common (@sec-lda).
 
 **Log-likelihood.** A score for how well a model fits the data. Higher is better, but it always improves as you add topics, so it cannot choose K by itself (@sec-lda).
-
-**Lambda.** The strength of the penalty in a regularized regression. Chosen by cross-validation (@sec-supervised).
 
 **Median.** The middle value: half the values are smaller and half larger. Less affected by extreme values than the mean (@sec-data).
 
@@ -74,15 +84,17 @@ Plain-language definitions of the terms used in this book, in alphabetical order
 
 **Precision.** Of the cases a model flags as "yes," the share that really are. "When it says yes, can I trust it?" (@sec-supervised).
 
+**Pretrained model.** A model that has already learned from a huge amount of text before you use it, so that you can borrow what it learned instead of starting from nothing (@sec-embeddings).
+
 **Prevalence (in STM).** How much of the text belongs to a topic. STM lets prevalence depend on covariates (@sec-stm).
 
 **Recall.** Of the cases that really are "yes," the share the model found. "How many did it catch?" (@sec-supervised).
 
 **Regression.** A method for estimating how an outcome changes with something else. The result is a coefficient (@sec-stm).
 
-**Regularization.** Adding a penalty on the size of a model's coefficients so it does not overfit (@sec-supervised).
-
 **Regular expression (regex).** A compact pattern language for searching text, such as `^\\d+$` for "only digits" (@sec-r-primer).
+
+**Regularization.** Adding a penalty on the size of a model's coefficients so it does not overfit (@sec-supervised).
 
 **Seed.** The starting point of R's random number generator. Setting it makes random steps reproducible (@sec-r-primer).
 
@@ -92,9 +104,9 @@ Plain-language definitions of the terms used in this book, in alphabetical order
 
 **Standard error.** A measure of how uncertain an estimate (such as an average) is. Shrinks as the group gets larger (@sec-sentiment).
 
-**STM (structural topic model).** A topic model that lets topic prevalence depend on document characteristics (@sec-stm).
-
 **Stemming / lemmatizing.** Reducing words to a root or dictionary form, so "advisor," "advisors," and "advising" count as one (@sec-tokens).
+
+**STM (structural topic model).** A topic model that lets topic prevalence depend on document characteristics (@sec-stm).
 
 **Stop words.** Very common function words ("the," "and," "of") removed before counting (@sec-tokens).
 
@@ -110,6 +122,12 @@ Plain-language definitions of the terms used in this book, in alphabetical order
 
 **Topic.** In a topic model, a list of words that tend to appear together. A topic is not a label; you name it yourself by reading its words (@sec-lda).
 
+**Transformer.** The kind of neural network behind modern language models. MiniLM is a small one (@sec-embeddings).
+
 **Unsupervised learning.** Finding patterns in data without an answer key (@sec-lda).
 
+**Vector.** A list of numbers. An answer's embedding is a vector (@sec-embeddings).
+
 **Vocabulary.** The set of distinct words a model works with, often after dropping very rare ones (@sec-lda, @sec-supervised).
+
+**Zero-shot learning.** Classifying with no labeled examples, by describing the categories and asking a model how well each text fits them (@sec-wrapup).

@@ -35,7 +35,26 @@ Rscript R/01-prep-data.R data/raw/vcu_cares.xlsx
 
 The script drops demographics (major, GPA, gender, race/ethnicity) because no chapter uses them. Never commit the real workbook or anything derived from it, and never publish a site rendered from it. The prose in the book was written against the synthetic data, so real results will differ.
 
-## Step 2: Render
+## Step 2 (Chapter 8 only): Create the embeddings
+
+Chapter 8 uses a small pretrained language model (MiniLM) that runs on your own computer, through one short Python script. Nothing else in the book needs Python, and if you skip this step every other chapter still renders (Chapter 8 will stop with a message telling you to run it).
+
+You need Python 3.9 or newer. Install the packages once, from the project root. Install PyTorch first, because the CPU-only build is much smaller than the default one:
+
+```bash
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r py/requirements.txt
+```
+
+Then, after Step 1:
+
+```bash
+python py/embed.py
+```
+
+The first run downloads the model (about 90 MB) and takes a minute or two. It writes `data/embeddings_minilm.csv`, which is gitignored like everything else in `data/`. After the first download the model works offline, and no text leaves your computer. The script prints the model's exact version; paste it into `MODEL_REVISION` in `py/embed.py` if you want to freeze it.
+
+## Step 3: Render
 
 Open `TextMining.Rproj`, then either click **Render Book** in the Build pane, or run `quarto render` in the Terminal. To work on one chapter, run its chunks interactively in RStudio first; it is much easier than debugging a whole-book render.
 
@@ -43,7 +62,7 @@ Chapters 4 and 5 (topic models) were drafted without access to `topicmodels` and
 
 ## Publishing the site
 
-The site is built and published by GitHub Actions (`.github/workflows/publish.yml`), always from the synthetic data. Rendered output (`docs/`, `_freeze/`) is gitignored on purpose, so a local render can never leak real data into the repository.
+The site is built and published by GitHub Actions (`.github/workflows/publish.yml`), always from the synthetic data. The build also installs Python and runs `py/embed.py`, so Chapter 8 renders on the site. Rendered output (`docs/`, `_freeze/`) is gitignored on purpose, so a local render can never leak real data into the repository.
 
 **One-time setup**
 

@@ -37,7 +37,8 @@ book:
     - part: "Supervised Learning"
       chapters:
         - 07-supervised.qmd
-    - 08-wrapping-up.qmd
+        - 08-embeddings.qmd
+    - 09-wrapping-up.qmd
     - references.qmd
   appendices:
     - appendix-r-primer.qmd

@@ -13,7 +13,8 @@ A lab guide to text mining, built as a [Quarto](https://quarto.org) book in the 
 | 5 | Topic models II: structural topic models | `stm` |
 | 6 | Sentiment analysis (lexicon-based) | `tidytext` |
 | 7 | Supervised learning: predicting the interviewers' topic codes | `glmnet` |
-| 8 | Wrapping up: choosing methods, reporting honestly | none |
+| 8 | Embeddings: a small pretrained language model, and how few labels you need | `glmnet`, plus one Python script (`sentence-transformers`) |
+| 9 | Wrapping up: choosing methods, reporting honestly | none |
 
 The arc runs from descriptive methods (counts, TF-IDF) through structure-finding methods (topic models, sentiment) to supervised learning.
 
@@ -29,6 +30,8 @@ _quarto.yml                 book configuration
 styles.scss                 theme (same palette as the MLM book)
 R/00-make-synthetic.R       generates the synthetic sample workbook
 R/01-prep-data.R            builds data/vcu_cares_long.csv (synthetic workbook by default)
+R/classification.R          the Chapter 7 functions, reused by Chapter 8
+py/embed.py                 creates the embeddings used in Chapter 8 (the only Python)
 R/helpers.R                 shared setup: data loading, cleaning rules, plot theme
 sample-data/                synthetic workbook (safe to commit)
 data/                       NOT COMMITTED: derived files, and a real workbook if you have one
@@ -44,6 +47,7 @@ Every chapter begins with `source("R/helpers.R")`, so the cleaning rules (placeh
 | 1, 2, 3, 6, 7 | Yes | Rendered on the synthetic data; prose checked against that output |
 | 4 (LDA) | Partly | Everything except the `LDA()` fit itself was run, using a stand-in model. Needs a first real run |
 | 5 (STM) | No | Written against the `stm` documentation but never executed. Expect to proofread it on first render |
-| 8 | n/a | No code |
+| 8 (Embeddings) | Python half: not run locally | The R half was tested against stand-in embeddings. The real model runs in the GitHub build |
+| 9 | n/a | No code |
 
 Chapters 4 and 5 need `topicmodels` and `stm`, which could not be installed in the environment where this was drafted. The Actions build installs them, so its first run is the first real test of these two chapters. Check it, and revise the prose to describe the topics you actually get.

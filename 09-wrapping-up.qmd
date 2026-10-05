@@ -1,8 +1,8 @@
 # Wrapping Up {#sec-wrapup}
 
-We used one dataset and six methods. This chapter pulls them together: what each one is for, how to choose among them, how to describe what you did in writing, and where to go next. There is no new code here, only the thinking that should surround the code.
+We used one dataset and seven methods. This chapter pulls them together: what each one is for, how to choose among them, how to describe what you did in writing, and where to go next. There is no new code here, only the thinking that should surround the code.
 
-## The same answers, six ways
+## The same answers, seven ways
 
 Each method looked at the same text and asked a different question.
 
@@ -14,6 +14,7 @@ Each method looked at the same text and asked a different question.
 | STM (Ch. 5) | What themes, and do they differ by group? | Text, K, covariates | Topics and effects with uncertainty |
 | Lexicon sentiment (Ch. 6) | How positive or negative is the language? | Text and a lexicon | A score per document |
 | Supervised classification (Ch. 7) | Can we reproduce a human coding? | Text and labels | A predictive model and its accuracy |
+| Embeddings + classification (Ch. 8) | Does a pretrained model's sense of meaning help, especially with few labels? | Text, labels, a pretrained model | A predictive model, often better with few examples |
 
 A useful way to sort them is by **how much you tell the computer in advance**.
 
@@ -21,6 +22,7 @@ A useful way to sort them is by **how much you tell the computer in advance**.
 - **Unsupervised methods** (topic models) tell it how many themes to look for, and let it propose them. You decide what the themes mean.
 - **Lexicon methods** (sentiment) tell it what words mean, through a dictionary someone else built.
 - **Supervised methods** (classification) tell it the right answers for some examples, and ask it to generalize.
+- **Pretrained models** (embeddings) lend it knowledge learned from huge amounts of other text, so that it needs fewer examples from yours.
 
 The more you tell it, the more you can *check* its work, and the more its answers reflect your choices.
 
@@ -32,6 +34,7 @@ Start from the question, not the technique.
 - *"I want to compare two groups."* TF-IDF for a quick look, STM when you want estimates with uncertainty.
 - *"I want themes but have no categories."* Topic models. Plan to spend your time reading and naming.
 - *"I already have a coding scheme."* Supervised classification, to scale it up or to test whether it is learnable.
+- *"I have a coding scheme but only a few coded examples, or people word things in many different ways."* Embeddings plus a simple classifier. Compare it with word counts on your own data with a learning curve, as in @sec-embeddings.
 - *"I want to know how people feel."* Be careful. Lexicon scores measure vocabulary, and as we saw, concerns are worded with positive words. Consider a supervised model trained on human-rated examples.
 
 ## Five habits that carried through the book
@@ -80,8 +83,8 @@ The book's data are synthetic, but the real VCU CARES responses are students des
 
 ## Where to go next
 
-- **Embeddings.** Instead of counting words, represent each answer as a list of numbers (a *vector*) that captures meaning, so "advisor" and "counselor" land near each other. This addresses many of the vocabulary limits we hit.
-- **Large language models for coding.** An LLM can apply a codebook to thousands of answers. Everything from @sec-supervised still applies: hold out human-coded answers and measure agreement before trusting it.
+- **Zero-shot learning.** In @sec-embeddings we still needed labeled examples to train the lasso. A *zero-shot* classifier needs none: you give it only the names of the topics, and it scores how well each answer fits each one. Compact models trained for this (natural-language-inference models) run locally, like MiniLM did.
+- **Large language models for coding.** A chat-style language model can apply a whole codebook to thousands of answers, with or without a few examples in the prompt (*few-shot*). Everything from @sec-supervised still applies: hold out human-coded answers and measure agreement before trusting it. One practical warning: most of these models are hosted services, which means every answer is sent to an outside company. For real student responses, check what your approvals allow, and consider models you can run on your own computer.
 - **Inter-rater reliability.** If two humans code the same answers, how often do they agree? That sets the ceiling for any classifier.
 - **More reading.** The references list two free online books, *Text Mining with R* and *Supervised Machine Learning for Text Analysis in R*, that go deeper on everything here.
 
