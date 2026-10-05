@@ -300,7 +300,7 @@ gap <- curve_mean |>
   pivot_wider(names_from = features, values_from = auc) |>
   mutate(gap = embeddings - tfidf)
 g <- function(size) round(gap$gap[gap$n == size], 2)
-auc_at <- function(size, feature) round(gap[[feature]][gap$n == size], 2)
+auc_at <- function(size, feature) sprintf("%.2f", gap[[feature]][gap$n == size])   # always two decimals
 big_loss <- compare |> slice_min(difference, n = 2)
 ```
 
@@ -339,7 +339,7 @@ There is also a ceiling that no model can pass. Some of the interviewers' codes 
 | Setup | R only | Adds one Python step and a model download |
 | Speed | Very fast | Slower to prepare (embedding), then similar |
 | Labeled examples needed | Struggled below a few hundred | Led at 150 to 300 in our run; neither learned much below about 100 |
-| Handles different wording | Poorly | Better |
+| Handles different wording | Poorly ("advisor" and "counselor" look unrelated) | Better in principle. Our clean synthetic text does not really test this |
 | Can you read why it predicts a topic? | Yes: the lasso keeps named words | No: the 384 numbers have no names |
 
 The last row is a real cost. With word counts, the lasso hands you a list of words ("events," "clubs") that you can read and check. With embeddings, the model's reasons are spread over 384 unnamed numbers. When you must be able to explain and audit a prediction, that interpretability may be worth more than a small gain in accuracy.
