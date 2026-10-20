@@ -13,6 +13,18 @@ install.packages(c(
 
 `topicmodels` needs the GNU Scientific Library on some Linux systems (`libgsl-dev`).
 
+## Getting the files (no GitHub account needed)
+
+You can read the book without an account at <https://mikediam123.github.io/text-mining/>. To run the code, you need a copy of the project folder. Pick whichever of these is easiest:
+
+- **Download ZIP.** On the repository page (<https://github.com/mikediam123/text-mining>), click the green **Code** button, then **Download ZIP**, and unzip it. No account required.
+- **A shared Drive folder.** Someone with a copy can upload the unzipped folder, or the ZIP, to Google Drive and share it. This is a **snapshot**: it does not update when the repository changes, so re-download when you hear there is a new version.
+- **GitHub Desktop.** If you do want updates, GitHub Desktop can clone the repository and pull changes without using a terminal.
+
+Whichever you choose, **copy the project to a local folder before opening it.** RStudio and Quarto can be slow or unreliable when working inside a synced Google Drive folder. Then open `TextMining.Rproj` and continue with the steps below.
+
+> **Important:** Keep real VCU CARES data out of any shared folder unless that is approved for student statements. If you have approved access, put the workbook in `data/raw/` on your own machine only (see Step 1).
+
 ## Step 1: Build the analysis file
 
 The book runs on a **synthetic** dataset that ships with the repository (`sample-data/vcu_cares_synthetic.xlsx`). It has the same structure and size as the real VCU CARES workbook, but every word of text is invented. See `sample-data/README.md` for what it can and cannot be used for.
