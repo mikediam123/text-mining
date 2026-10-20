@@ -23,9 +23,7 @@ You can read the book without an account at <https://mikediam123.github.io/text-
 
 Whichever you choose, **copy the project to a local folder before opening it.** RStudio and Quarto can be slow or unreliable when working inside a synced Google Drive folder. Then open `TextMining.Rproj` and continue with the steps below.
 
-::: {.callout-important}
-Keep real VCU CARES data out of any shared folder unless that is approved for student statements. If you have approved access, put the workbook in `data/raw/` on your own machine only (see Step 1).
-:::
+> **Important:** Keep real VCU CARES data out of any shared folder unless that is approved for student statements. If you have approved access, put the workbook in `data/raw/` on your own machine only (see Step 1).
 
 ## Step 1: Build the analysis file
 
