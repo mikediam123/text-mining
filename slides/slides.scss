@@ -1,0 +1,22 @@
+/*-- scss:defaults --*/
+$teal:       #1a7a6e;
+$teal-light: #e0f2ef;
+$dark:       #1a2e2b;
+
+$body-color:           #2c2c2c;
+$link-color:           $teal;
+$presentation-heading-color: $dark;
+$presentation-heading-font-weight: 600;
+$presentation-font-size-root: 34px;
+$font-family-sans-serif: Georgia, "Times New Roman", serif;
+
+/*-- scss:rules --*/
+.reveal h2 { border-bottom: 3px solid $teal-light; padding-bottom: 0.15em; }
+.reveal .title-slide h1 { color: $teal; }
+.reveal code { font-size: 0.85em; }
+.reveal table { font-size: 0.8em; }
+.reveal blockquote { border-left: 4px solid $teal; font-style: italic; }
+.reveal .callout-note { border-left-color: $teal !important; }
+.small { font-size: 0.8em; }
+.muted { color: #666; }
+.big { font-size: 1.3em; }

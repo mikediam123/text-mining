@@ -1,0 +1,142 @@
+---
+title: "Text Mining in R"
+subtitle: "Project kickoff: the plan, the data, and chapters 1–2"
+author: "Michael Broda, Ph.D."
+date: today
+format:
+  revealjs:
+    theme: [default, slides.scss]
+    slide-number: true
+    transition: fade
+    center: false
+    embed-resources: true
+    footer: "Text Mining in R · kickoff"
+---
+
+## What we're building
+
+A **lab guide to text mining in R**, taught with one dataset: the VCU CARES student interviews.
+
+- For lab members who are comfortable in R, but **new to text mining** and not strong in stats or programming
+- Each chapter: the idea in plain language, then the code, then what each line does, then how to read the output critically
+- Goal: a working sense of what each method does, when to use it, and **what it cannot tell you**
+
+::: notes
+Open with the audience, because it explains the tone of the book: explanations come first, jargon is defined, and every chapter ends with cautions.
+:::
+
+## The data: VCU CARES
+
+Short interviews with VCU students. Three open-ended questions:
+
+| Question | We call it |
+|---|---|
+| What has VCU done really well? | **strengths** |
+| What is your biggest concern about how VCU supports students? | **concerns** |
+| What are the top three things VCU can do to improve your experience? | **ideas** |
+
+- About 1,240 students, three batches (three sheets in the workbook)
+- For strengths and concerns in the first batch, interviewers also ticked **topic codes** (Advising, Dining, Safety, …)
+
+::: notes
+The topic codes matter later: they become the answer key for supervised learning in Chapters 7 and 8.
+:::
+
+## The arc of the book
+
+| Part | Chapters | The question |
+|---|---|---|
+| Getting started | 1 Data, 2 Tokens | What is in here, and how do we count it? |
+| Descriptive | 3 TF-IDF | What words set one group apart? |
+| Finding structure | 4 LDA, 5 STM, 6 Sentiment | What themes are there? How positive is it? |
+| Supervised | 7 Classification, 8 Embeddings | Can a model reproduce the interviewers' codes? |
+| | 9 Wrapping up | Which method, and how to report honestly |
+
+*Move from methods that describe the text to methods that model it.*
+
+## Privacy: the real data never leave
+
+::: columns
+::: {.column width="50%"}
+**Real data**
+
+- Student statements, cannot be shared
+- Stay on approved machines only
+- `data/` is gitignored; checked for leaks in files and git history
+:::
+
+::: {.column width="50%"}
+**Synthetic data**
+
+- Same structure and size: 3 sheets, 1,021 / 79 / 141 rows, 47 columns
+- Every word of text is invented
+- Safe to publish, so **the book is public**
+:::
+:::
+
+::: callout-important
+Synthetic means the *methods* are real but the *findings* are not. Group differences are random by construction.
+:::
+
+::: notes
+The file is sample-data/vcu_cares_synthetic.xlsx, made by R/00-make-synthetic.R (seed 664). The same scripts run on the real workbook if you have approved access.
+:::
+
+## How it fits together
+
+```
+sample-data/vcu_cares_synthetic.xlsx
+        │   Rscript R/01-prep-data.R
+        ▼
+data/vcu_cares_long.csv      (gitignored, one row per answer)
+        │   every chapter calls load_vcu()
+        ▼
+chapters 1–9  →  GitHub Actions builds the book  →  GitHub Pages
+```
+
+- Everything runs from the RStudio project, `TextMining.Rproj`
+- Chapter 8 also uses a small Python step (MiniLM embeddings, pinned model version)
+- Site: **mikediam123.github.io/text-mining**
+
+## Today: chapters 1 and 2
+
+::: columns
+::: {.column width="50%"}
+**1. The data**
+
+- Long format: one row per answer
+- Look at counts and length first
+- Cleaning rules are *decisions*
+- What counts as a "document"?
+- Read before you mine
+:::
+
+::: {.column width="50%"}
+**2. Tokens**
+
+- A token is the unit you count
+- `unnest_tokens()`: one row per word
+- Stop words and domain stop words
+- Bigrams and a word network
+- Frequency is not importance
+:::
+:::
+
+*Now: switch to the book, with RStudio open next to it.*
+
+## Two ideas to carry forward
+
+> A number tells you where to look; the text tells you what it means.
+
+1. **Every cleaning rule is a decision.** Write it down and look at what it removes.
+2. **A "document" is your choice**, and every later result depends on it.
+
+## Where we go from here
+
+- **Next:** Chapter 3 (TF-IDF), then topic models and sentiment
+- **Your part:** run Chapters 1–2 locally (`SETUP.md`), and note anything unclear. The book is meant for people new to this.
+- **Open question:** a zero-shot / LLM chapter is on hold until we settle API and privacy concerns
+
+::: {.small .muted}
+Repo: github.com/mikediam123/text-mining
+:::
