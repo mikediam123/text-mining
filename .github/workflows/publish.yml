@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # pinned: the 26.04 image hung installing R (Nov 2026)
     steps:
       - uses: actions/checkout@v4
 
@@ -106,7 +106,7 @@ jobs:
   deploy:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # pinned: the 26.04 image hung installing R (Nov 2026)
     permissions:
       pages: write
       id-token: write
