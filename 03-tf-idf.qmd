@@ -133,6 +133,42 @@ tfidf_q |>
 
 **Reading the result.** With only three documents, a word that appears in all three gets an idf of zero and vanishes. A word that appears in just one question scores high. The results are real but coarse: with $N = 3$, idf can only take a few values. That is a reason to be careful about tiny document counts.
 
+### Common is not the same as unimportant
+
+That zero raises a fair question. Suppose *every* student named tuition as a concern. "Tuition" would then appear in every document, its idf would be zero, and it would vanish from the chart. Isn't it still important?
+
+It is. TF-IDF is not missing a mistake; it is answering a different question. **TF-IDF measures distinctiveness, not importance.** It asks what sets one document apart from the others, and a word that everyone uses sets no one apart. The formula cannot tell a filler word like "the" from a concern everyone shares: both look "common everywhere."
+
+So match the tool to the question:
+
+| Question | Tool |
+|---|---|
+| What do students talk about most? | Counts, or the **share of answers** that mention a word (@sec-tokens) |
+| What does this group say that others don't? | TF-IDF (this chapter) |
+
+The share of answers is easy to compute. Count each word at most once per answer, then divide by the number of answers:
+
+```{r}
+#| label: doc-share
+
+tokens |>
+  distinct(doc_id, word) |>
+  count(word, sort = TRUE) |>
+  mutate(share = n / n_distinct(vcu$doc_id)) |>
+  head(10)
+```
+
+- `distinct(doc_id, word)` keeps one row for each answer-word pair, so a student who writes "tuition" three times counts once.
+- `count(word, sort = TRUE)` then gives the number of answers each word appears in, sorted from most to least.
+- `share` divides by the total number of answers. A share of 0.10 means the word appears in 10% of answers.
+
+Words near the top of this list but absent from the TF-IDF chart are the "important but universal" ones. Report both views: one tells you what is common, the other tells you what is different.
+
+::: callout-tip
+## Exact zeros are rare
+A word has to appear in *every* document to score exactly zero. With thousands of answers as documents, a word in 40% of them still gets a modest idf. It just never ranks near the top of a list of distinctive words.
+:::
+
 ## Documents = student level
 
 A more useful comparison is by who is speaking. Do graduate students talk about different things than undergraduates?
