@@ -201,6 +201,8 @@ The new pieces here:
 - `bind_tf_idf(word, level, n)` now treats each *level* (undergraduate, graduate, professional) as a document.
 - `filter(n >= 5)` keeps only words used at least five times within that group. Without it, TF-IDF's top words are dominated by words used once, by one student, in one level. That is a known weakness: **rare words get high idf**, even when rarity just means "a typo" or "a name." A minimum count is the standard guard, and you can raise or lower the 5.
 
+**Why the professional panel is empty.** The professional panel lists words but shows no bars. With only three documents (the three levels), any word that appears in all three has an idf of $\ln(3/3) = 0$. The professional group is so small that the only words its students use five or more times are everyday words that every group uses, so every one of them scores zero. This is the "common is not distinctive" point from the previous section, combined with the small-group problem in the warning below. Lowering the minimum to `n >= 2` would make bars appear, but they would reflect one or two students, not the group.
+
 ::: callout-note
 ## In this synthetic data, the differences are noise
 
