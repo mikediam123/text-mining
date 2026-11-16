@@ -91,7 +91,7 @@ sample-data/vcu_cares_synthetic.xlsx
 data/vcu_cares_long.csv      (gitignored, one row per answer)
         │   every chapter calls load_vcu()
         ▼
-chapters 1–9  →  GitHub Actions builds the book  →  GitHub Pages
+chapters 1–9  →  render in RStudio, commit docs/  →  GitHub Pages
 ```
 
 - Everything runs from the RStudio project, `TextMining.Rproj`

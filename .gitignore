@@ -13,11 +13,10 @@
 /*_files/
 /*_cache/
 
-# Rendered output is built by GitHub Actions (.github/workflows/publish.yml) from
-# the synthetic data, so it is not committed. This also guarantees that a local
-# render against REAL data can never end up in the repository.
-/docs/
-/_freeze/
+# Rendered output (docs/, _freeze/) IS committed: the book is rendered locally
+# and GitHub Pages serves docs/ from main. _prerender.R refuses to render
+# unless data/ was built from the synthetic workbook, so real responses can't
+# end up in either folder.
 
 # Python
 __pycache__/

@@ -7,6 +7,9 @@
 #         or pass a path to a workbook with the same layout, e.g. the real one:
 #         Rscript R/01-prep-data.R data/raw/vcu_cares.xlsx   (never commit this file)
 # Output: data/vcu_cares_long.csv   (derived; gitignored)
+#         data/source-md5.txt      (fingerprint of the input workbook; _prerender.R
+#                                   refuses to render the book unless it is the
+#                                   synthetic one)
 #
 # One row per student answer. The three source sheets are stacked into a
 # single long table. Demographics (major, GPA, gender, race/ethnicity) are
@@ -108,5 +111,9 @@ vcu <- bind_rows(orig_long, event_long) |>
   select(doc_id, resp_id, source, event, level, question, text, topics)
 
 write_csv(vcu, "data/vcu_cares_long.csv", na = "")
+
+# Record which workbook built this file. The published site may only be
+# rendered from the synthetic data, and _prerender.R checks this fingerprint.
+writeLines(unname(tools::md5sum(raw)), "data/source-md5.txt")
 message("Wrote ", nrow(vcu), " answers from ", n_distinct(vcu$resp_id),
         " respondents to data/vcu_cares_long.csv")

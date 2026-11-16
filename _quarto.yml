@@ -1,6 +1,8 @@
 project:
   type: book
-  output-dir: docs        # GitHub Pages serves from this folder
+  output-dir: docs        # committed; GitHub Pages serves from main /docs
+  pre-render:
+    - _prerender.R        # refuses to render unless the data are synthetic
   post-render:
     - _postrender.R       # creates docs/.nojekyll, checks for stray CDN scripts
 

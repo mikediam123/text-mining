@@ -20,7 +20,7 @@ The arc runs from descriptive methods (counts, TF-IDF) through structure-finding
 
 ## The data are synthetic
 
-The book runs on a synthetic stand-in for the VCU CARES workbook (`sample-data/vcu_cares_synthetic.xlsx`), with the same structure and size as the real data but entirely invented text. The real responses are student statements and **must never be committed**: `.gitignore` excludes `data/`, and rendered output (`docs/`, `_freeze/`) is built by GitHub Actions from the synthetic data rather than committed. See `SETUP.md`.
+The book runs on a synthetic stand-in for the VCU CARES workbook (`sample-data/vcu_cares_synthetic.xlsx`), with the same structure and size as the real data but entirely invented text. The real responses are student statements and **must never be committed**: `.gitignore` excludes `data/`, and the book is rendered locally and committed (`docs/`, `_freeze/`), with a pre-render check (`_prerender.R`) that refuses to render unless the data came from the synthetic workbook. See `SETUP.md`.
 
 ## Project layout
 
@@ -35,19 +35,12 @@ py/embed.py                 creates the embeddings used in Chapter 8 (the only P
 R/helpers.R                 shared setup: data loading, cleaning rules, plot theme
 sample-data/                synthetic workbook (safe to commit)
 data/                       NOT COMMITTED: derived files, and a real workbook if you have one
-.github/workflows/         builds the book and publishes it to GitHub Pages
+docs/, _freeze/             the rendered site and cached results (committed; Pages serves docs/)
+_prerender.R                refuses to render unless data/ was built from the synthetic workbook
 ```
 
 Every chapter begins with `source("R/helpers.R")`, so the cleaning rules (placeholder answers, apostrophe handling) live in exactly one place.
 
 ## Status
 
-| Chapter | Rendered and checked | Notes |
-|---|---|---|
-| 1, 2, 3, 6, 7 | Yes | Rendered on the synthetic data; prose checked against that output |
-| 4 (LDA) | Partly | Everything except the `LDA()` fit itself was run, using a stand-in model. Needs a first real run |
-| 5 (STM) | No | Written against the `stm` documentation but never executed. Expect to proofread it on first render |
-| 8 (Embeddings) | Python half: not run locally | The R half was tested against stand-in embeddings. The real model runs in the GitHub build |
-| 9 | n/a | No code |
-
-Chapters 4 and 5 need `topicmodels` and `stm`, which could not be installed in the environment where this was drafted. The Actions build installs them, so its first run is the first real test of these two chapters. Check it, and revise the prose to describe the topics you actually get.
+All nine chapters have rendered from the synthetic data, and the prose was checked against that output. The book is rendered locally and published from `docs/` on `main`; see `SETUP.md`.

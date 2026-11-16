@@ -39,13 +39,13 @@ This stacks the workbook's three sheets into one long table, `data/vcu_cares_lon
 
 ### Using the real data (approved users only)
 
-If you have approved access to the real workbook, keep it **outside** the repository folder or inside `data/` (which is gitignored), and point the same script at it:
+This project publishes its rendered output, so **analyze real data in a separate copy of the project, outside this repository folder** (for example, a "Download ZIP" copy with no `.git` folder). Keep the real workbook in that copy's `data/` folder and point the script at it:
 
 ```bash
 Rscript R/01-prep-data.R data/raw/vcu_cares.xlsx
 ```
 
-The script drops demographics (major, GPA, gender, race/ethnicity) because no chapter uses them. Never commit the real workbook or anything derived from it, and never publish a site rendered from it. The prose in the book was written against the synthetic data, so real results will differ.
+The script drops demographics (major, GPA, gender, race/ethnicity) because no chapter uses them. Never commit the real workbook or anything derived from it. As a safety net, `_prerender.R` refuses to render the book unless `data/` was built from the synthetic workbook: `01-prep-data.R` records a fingerprint of the workbook it read, and the render stops if it isn't the synthetic one. You can still run chunks interactively on real data; you just can't render. The prose in the book was written against the synthetic data, so real results will differ.
 
 ## Step 2 (Chapter 8 only): Create the embeddings
 
@@ -74,15 +74,22 @@ Chapters 4 and 5 (topic models) were drafted without access to `topicmodels` and
 
 ## Publishing the site
 
-The site is built and published by GitHub Actions (`.github/workflows/publish.yml`), always from the synthetic data. The build also installs Python and runs `py/embed.py`, so Chapter 8 renders on the site. Rendered output (`docs/`, `_freeze/`) is gitignored on purpose, so a local render can never leak real data into the repository.
+The book is rendered **locally** and the rendered site is committed. GitHub Pages serves the `docs/` folder from `main`; nothing is built on GitHub.
+
+**Each time you update the book**
+
+1. Make sure `data/` came from the synthetic workbook (`Rscript R/01-prep-data.R` with no path). The render refuses otherwise.
+2. Render: **Render Book** in RStudio, or `quarto render`. Because `freeze: auto` is on, only chapters you changed are re-run; the rest reuse their cached results in `_freeze/`.
+3. Commit everything, including `docs/` and `_freeze/`, and push to `main`. The site updates within a minute or two.
+
+Chapter 8 needs the embeddings (Step 2) only when it re-runs, which is only when you edit it. Its cached results in `_freeze/` are used otherwise.
 
 **One-time setup**
 
-1. Merge your work to `main`.
-2. In the repository, go to **Settings > Pages** and set **Source** to **GitHub Actions**.
-3. Push to `main` (or run the workflow from the **Actions** tab). The site appears at `https://<owner>.github.io/text-mining/`.
+1. In the repository, go to **Settings > Pages > Build and deployment** and set **Source** to **Deploy from a branch**, then choose `main` and `/docs`.
+2. Before the first local render, delete any old `docs/` and `_freeze/` folders in your copy, so nothing from an earlier render (on any data) gets committed. Then render the whole book once and commit the result.
 
-Every pull request also runs the build without deploying, which catches a chapter that stops rendering before it reaches the site.
+The site is at `https://mikediam123.github.io/text-mining/`.
 
 ### Before making the repository public
 
@@ -90,7 +97,7 @@ GitHub Pages on a free account needs a public repository. Work through this list
 
 - [ ] **No real data, ever, in history.** Check with `git log --all --name-only --pretty=format: | sort -u` and look for any `.xlsx` or `.csv` other than `sample-data/vcu_cares_synthetic.xlsx`. A file deleted in a later commit is still in history and would be public.
 - [ ] **No real quotes in the text.** Skim the `.qmd` files and `R/00-make-synthetic.R` for any phrase copied from a real response.
-- [ ] **The Actions build is green** on `main`, including chapters 4 and 5.
+- [ ] **A full local render succeeds** from the synthetic data, including chapters 4, 5, and 8.
 - [ ] **Your approvals allow** describing the study design publicly (the three interview questions and the topic codes appear in Chapter 1).
 
 If any of the first two cannot be confirmed, keep the repository private.
