@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="description" content="A hands-on introduction to text mining for lab members, built around open-ended interviews with VCU students. Moves from descriptive methods (word counts, TF-IDF) to topic models, sentiment analysis, and supervised learning.">
+<title>Appendix A — Reading R Code: A Short Guide – Text Mining in R</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./appendix-glossary.html" rel="next">
+<link href="./references.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-a09481bce8a2314b82ccc09e3e79ae8c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+</head>
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top"><nav class="quarto-secondary-nav"><div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./appendix-r-primer.html">Appendices</a></li><li class="breadcrumb-item"><a href="./appendix-r-primer.html"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Reading R Code: A Short Guide</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav></header><!-- content --><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto"><div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Text Mining in R</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/mikediam123/text-mining" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Welcome</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Getting Started</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./01-the-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">The Data</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./02-tokens.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Tokens</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Descriptive Methods</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./03-tf-idf.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Term Frequency and TF-IDF</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Finding Structure</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./04-topic-lda.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Topic Models I: LDA</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./05-topic-stm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Topic Models II: Structural Topic Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./06-sentiment.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Sentiment Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./07-supervised.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Supervised Learning: Predicting Topic Codes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./08-embeddings.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Embeddings: Using a Pretrained Language Model</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./09-wrapping-up.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Wrapping Up</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./appendix-r-primer.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Reading R Code: A Short Guide</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./appendix-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Glossary</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+    </ul>
+</div>
+</nav><div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active"><h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+<li><a href="#running-code" id="toc-running-code" class="nav-link active" data-scroll-target="#running-code"><span class="header-section-number">A.1</span> Running code</a></li>
+  <li><a href="#comments" id="toc-comments" class="nav-link" data-scroll-target="#comments"><span class="header-section-number">A.2</span> Comments</a></li>
+  <li><a href="#objects-and-the-arrow" id="toc-objects-and-the-arrow" class="nav-link" data-scroll-target="#objects-and-the-arrow"><span class="header-section-number">A.3</span> Objects and the arrow</a></li>
+  <li><a href="#text-numbers-and-truefalse" id="toc-text-numbers-and-truefalse" class="nav-link" data-scroll-target="#text-numbers-and-truefalse"><span class="header-section-number">A.4</span> Text, numbers, and TRUE/FALSE</a></li>
+  <li><a href="#functions-and-their-arguments" id="toc-functions-and-their-arguments" class="nav-link" data-scroll-target="#functions-and-their-arguments"><span class="header-section-number">A.5</span> Functions and their arguments</a></li>
+  <li><a href="#packages" id="toc-packages" class="nav-link" data-scroll-target="#packages"><span class="header-section-number">A.6</span> Packages</a></li>
+  <li><a href="#data-frames" id="toc-data-frames" class="nav-link" data-scroll-target="#data-frames"><span class="header-section-number">A.7</span> Data frames</a></li>
+  <li><a href="#the-pipe" id="toc-the-pipe" class="nav-link" data-scroll-target="#the-pipe"><span class="header-section-number">A.8</span> The pipe: <code>|&gt;</code></a></li>
+  <li><a href="#the-verbs-we-use-all-the-time" id="toc-the-verbs-we-use-all-the-time" class="nav-link" data-scroll-target="#the-verbs-we-use-all-the-time"><span class="header-section-number">A.9</span> The verbs we use all the time</a></li>
+  <li><a href="#patterns-in-text-regular-expressions" id="toc-patterns-in-text-regular-expressions" class="nav-link" data-scroll-target="#patterns-in-text-regular-expressions"><span class="header-section-number">A.10</span> Patterns in text: regular expressions</a></li>
+  <li><a href="#randomness-and-set.seed" id="toc-randomness-and-set.seed" class="nav-link" data-scroll-target="#randomness-and-set.seed"><span class="header-section-number">A.11</span> Randomness and <code>set.seed()</code></a></li>
+  <li><a href="#chunk-options-in-quarto" id="toc-chunk-options-in-quarto" class="nav-link" data-scroll-target="#chunk-options-in-quarto"><span class="header-section-number">A.12</span> Chunk options in Quarto</a></li>
+  <li><a href="#common-errors-and-what-they-usually-mean" id="toc-common-errors-and-what-they-usually-mean" class="nav-link" data-scroll-target="#common-errors-and-what-they-usually-mean"><span class="header-section-number">A.13</span> Common errors, and what they usually mean</a></li>
+  <li><a href="#where-r-is-looking" id="toc-where-r-is-looking" class="nav-link" data-scroll-target="#where-r-is-looking"><span class="header-section-number">A.14</span> Where R is “looking”</a></li>
+  </ul><div class="toc-actions"><ul><li><a href="https://github.com/mikediam123/text-mining/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./appendix-r-primer.html">Appendices</a></li><li class="breadcrumb-item"><a href="./appendix-r-primer.html"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Reading R Code: A Short Guide</span></a></li></ol></nav><div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title"><span id="sec-r-primer" class="quarto-section-identifier">Appendix A — Reading R Code: A Short Guide</span></h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header><p>You do not need to be a programmer to follow this book. You do need to be able to <em>read</em> the code, so you know what each block is doing before you run it. This appendix covers the handful of ideas that appear on almost every page. If a chapter’s code looks like a wall of symbols, come back here.</p>
+<section id="running-code" class="level2" data-number="A.1"><h2 data-number="A.1" class="anchored" data-anchor-id="running-code">
+<span class="header-section-number">A.1</span> Running code</h2>
+<p>R code lives in two places in this book.</p>
+<ul>
+<li>
+<strong>Code blocks in a chapter</strong> (the gray boxes). You can copy any of them with the copy icon in the corner.</li>
+<li>
+<strong>Files in the project</strong>, such as <code>R/helpers.R</code>, which chapters load with <code><a href="https://rdrr.io/r/base/source.html">source()</a></code>.</li>
+</ul>
+<p>In RStudio, put the cursor on a line and press <strong>Ctrl+Enter</strong> (Cmd+Enter on a Mac) to run that line. Select several lines first to run them all. Output appears in the <strong>Console</strong> (text) or the <strong>Plots</strong> pane (charts). If you open a chapter (<code>.qmd</code> file), each gray block has a small green “play” button that runs the whole block.</p>
+<p>Run blocks <strong>in order, from the top of the chapter</strong>. Later blocks use things that earlier blocks created, so skipping ahead is the most common reason for an error such as <code>object 'vcu' not found</code>.</p>
+</section><section id="comments" class="level2" data-number="A.2"><h2 data-number="A.2" class="anchored" data-anchor-id="comments">
+<span class="header-section-number">A.2</span> Comments</h2>
+<p>Anything after a <code>#</code> on a line is a comment: a note to the human reader that R ignores.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># This whole line is a comment</span></span>
+<span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fl">5</span>   <span class="co"># and so is everything after the # on this line</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Throughout the book we put short comments inside code to explain what a line is for.</p>
+</section><section id="objects-and-the-arrow" class="level2" data-number="A.3"><h2 data-number="A.3" class="anchored" data-anchor-id="objects-and-the-arrow">
+<span class="header-section-number">A.3</span> Objects and the arrow</h2>
+<p>R stores things under names. The arrow <code>&lt;-</code> means “take what is on the right and save it under the name on the left.”</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">n_students</span> <span class="op">&lt;-</span> <span class="fl">1241</span>        <span class="co"># saves the number 1241 as n_students</span></span>
+<span><span class="va">greeting</span>   <span class="op">&lt;-</span> <span class="st">"hello"</span>     <span class="co"># saves a piece of text</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Read <code>&lt;-</code> aloud as “gets.” The thing you saved is called an <strong>object</strong>. Type its name on its own line to see what is inside it. Names are case-sensitive: <code>vcu</code> and <code>VCU</code> are different objects.</p>
+</section><section id="text-numbers-and-truefalse" class="level2" data-number="A.4"><h2 data-number="A.4" class="anchored" data-anchor-id="text-numbers-and-truefalse">
+<span class="header-section-number">A.4</span> Text, numbers, and TRUE/FALSE</h2>
+<ul>
+<li>
+<strong>Text</strong> (called a <em>string</em> or <em>character</em> value) goes in quotes: <code>"hello"</code>. Single or double quotes both work.</li>
+<li>
+<strong>Numbers</strong> have no quotes: <code>5</code>, <code>3.14</code>.</li>
+<li>
+<strong>Logical values</strong> are <code>TRUE</code> or <code>FALSE</code>. They come from questions you ask of the data, such as <code>n_words &lt;= 3</code>, which is <code>TRUE</code> for short answers and <code>FALSE</code> for the rest.</li>
+</ul>
+<p>The comparison symbols you will see are:</p>
+<table class="caption-top table">
+<thead><tr class="header">
+<th>Symbol</th>
+<th>Means</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>==</code></td>
+<td>is equal to (two equals signs; one <code>=</code> is something else)</td>
+</tr>
+<tr class="even">
+<td><code>!=</code></td>
+<td>is not equal to</td>
+</tr>
+<tr class="odd">
+<td>
+<code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>
+</td>
+<td>less than, at most, greater than, at least</td>
+</tr>
+<tr class="even">
+<td><code>!</code></td>
+<td>not (flips <code>TRUE</code> and <code>FALSE</code>)</td>
+</tr>
+<tr class="odd">
+<td><code>&amp;</code></td>
+<td>and</td>
+</tr>
+<tr class="even">
+<td><code>\|</code></td>
+<td>or</td>
+</tr>
+<tr class="odd">
+<td><code>%in%</code></td>
+<td>is one of the values in this list</td>
+</tr>
+</tbody>
+</table></section><section id="functions-and-their-arguments" class="level2" data-number="A.5"><h2 data-number="A.5" class="anchored" data-anchor-id="functions-and-their-arguments">
+<span class="header-section-number">A.5</span> Functions and their arguments</h2>
+<p>A <strong>function</strong> is a named recipe: you hand it ingredients and it hands back a result. You call it by writing its name followed by parentheses. The ingredients inside the parentheses are called <strong>arguments</strong>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Round.html">round</a></span><span class="op">(</span><span class="fl">3.14159</span>, digits <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Here <code>round</code> is the function. <code>3.14159</code> is the first argument (the number to round). <code>digits = 2</code> is a <em>named</em> argument: it says “keep two decimal places.” The answer is <code>3.14</code>.</p>
+<p>Two things to notice:</p>
+<ol type="1">
+<li>Some arguments are written with a name (<code>digits = 2</code>) and some without. If you leave out the name, R assumes the arguments are in the order the function expects. Named arguments are clearer, so we use them whenever the meaning would not be obvious.</li>
+<li>Most functions have <strong>options</strong> you can change by adding named arguments. When this book says “an option,” it means exactly this. To see all the options of any function, type <code><a href="https://rdrr.io/r/base/Round.html">?round</a></code> in the Console, which opens its help page.</li>
+</ol>
+<p>Functions can be nested, with one inside another. R works from the inside out: in <code>round(mean(x), 2)</code>, it first computes <code>mean(x)</code> and then rounds that.</p>
+</section><section id="packages" class="level2" data-number="A.6"><h2 data-number="A.6" class="anchored" data-anchor-id="packages">
+<span class="header-section-number">A.6</span> Packages</h2>
+<p>R comes with basic tools, and <strong>packages</strong> add more. You install a package once with <code>install.packages("name")</code>, and then load it in every new session with <code><a href="https://github.com/christopherkenny/name">library(name)</a></code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span><span class="op">(</span><span class="st">"tidytext"</span><span class="op">)</span>   <span class="co"># once per computer</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://juliasilge.github.io/tidytext/">tidytext</a></span><span class="op">)</span>              <span class="co"># once per R session</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Chapters begin by loading the packages they need. If you see <code>could not find function "unnest_tokens"</code>, it almost always means the package that contains it (here, <code>tidytext</code>) has not been loaded with <code><a href="https://rdrr.io/r/base/library.html">library()</a></code>.</p>
+<p>You can also name the package directly with <code>::</code>, as in <code>stats::sd(x)</code>. That is useful when two packages contain functions with the same name.</p>
+</section><section id="data-frames" class="level2" data-number="A.7"><h2 data-number="A.7" class="anchored" data-anchor-id="data-frames">
+<span class="header-section-number">A.7</span> Data frames</h2>
+<p>Most of what we analyze is stored in a <strong>data frame</strong>: a table where each <strong>row</strong> is one observation and each <strong>column</strong> is one variable. This book uses a modern version called a <em>tibble</em>, which prints more tidily.</p>
+<p>In our data, each row is one answer, and the columns include <code>text</code> (what the student said), <code>question</code> (which question it answers), and <code>level</code> (undergraduate or graduate).</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">vcu</span><span class="op">$</span><span class="va">text</span>          <span class="co"># the text column, as a list of values</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html">nrow</a></span><span class="op">(</span><span class="va">vcu</span><span class="op">)</span>         <span class="co"># how many rows</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html">ncol</a></span><span class="op">(</span><span class="va">vcu</span><span class="op">)</span>         <span class="co"># how many columns</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The <code>$</code> picks out one column by name.</p>
+</section><section id="the-pipe" class="level2" data-number="A.8"><h2 data-number="A.8" class="anchored" data-anchor-id="the-pipe">
+<span class="header-section-number">A.8</span> The pipe: <code>|&gt;</code>
+</h2>
+<p>The pipe is the symbol you will see most. It means “take what is on my left and use it as the first ingredient of the function on my right.” It lets you write a series of steps in the order you would say them.</p>
+<p>Without the pipe, steps nest inside each other and you read from the inside out:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span><span class="op">(</span><span class="fu">arrange</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="va">vcu</span>, <span class="va">level</span> <span class="op">==</span> <span class="st">"Graduate"</span><span class="op">)</span>, <span class="va">question</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>With the pipe, you read from top to bottom, the way you would describe it in words:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">vcu</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="va">level</span> <span class="op">==</span> <span class="st">"Graduate"</span><span class="op">)</span> <span class="op">|&gt;</span>   <span class="co"># keep only graduate students</span></span>
+<span>  <span class="fu">arrange</span><span class="op">(</span><span class="va">question</span><span class="op">)</span> <span class="op">|&gt;</span>             <span class="co"># sort by question</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>                          <span class="co"># show the first five rows</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Read <code>|&gt;</code> as “and then.” Both versions do exactly the same thing. Starting a new line after each <code>|&gt;</code> is just a layout habit that makes the steps easy to follow. (You will sometimes see <code>%&gt;%</code> in other people’s code. It does the same job.)</p>
+</section><section id="the-verbs-we-use-all-the-time" class="level2" data-number="A.9"><h2 data-number="A.9" class="anchored" data-anchor-id="the-verbs-we-use-all-the-time">
+<span class="header-section-number">A.9</span> The verbs we use all the time</h2>
+<p>Most of the data manipulation in this book uses a small family of functions from the <code>dplyr</code> package, part of the <code>tidyverse</code>. Each does one thing and is named for it.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead><tr class="header">
+<th>Function</th>
+<th>What it does</th>
+<th>Example</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="https://rdrr.io/r/stats/filter.html">filter()</a></code></td>
+<td>Keep only rows that meet a condition</td>
+<td><code>filter(level == "Graduate")</code></td>
+</tr>
+<tr class="even">
+<td><code>select()</code></td>
+<td>Keep only certain columns</td>
+<td><code>select(question, text)</code></td>
+</tr>
+<tr class="odd">
+<td><code>mutate()</code></td>
+<td>Add or change a column</td>
+<td><code>mutate(n_words = str_count(text, "\\S+"))</code></td>
+</tr>
+<tr class="even">
+<td><code>count()</code></td>
+<td>Count rows, optionally by group</td>
+<td><code>count(question)</code></td>
+</tr>
+<tr class="odd">
+<td><code>arrange()</code></td>
+<td>Sort rows</td>
+<td>
+<code>arrange(desc(n))</code> (<code>desc</code> = largest first)</td>
+</tr>
+<tr class="even">
+<td><code>group_by()</code></td>
+<td>Do the next steps separately for each group</td>
+<td><code>group_by(question)</code></td>
+</tr>
+<tr class="odd">
+<td><code>summarise()</code></td>
+<td>Collapse each group to one row of summary numbers</td>
+<td><code>summarise(mean = mean(net))</code></td>
+</tr>
+<tr class="even">
+<td><code>slice_max()</code></td>
+<td>Keep the rows with the largest values</td>
+<td><code>slice_max(n, n = 10)</code></td>
+</tr>
+</tbody>
+</table>
+<p>Three habits will make code easier to read:</p>
+<ul>
+<li>
+<code>group_by()</code> stays switched on until you call <code>ungroup()</code>. We often add <code>ungroup()</code> after a grouped summary so that later steps are not accidentally done group by group.</li>
+<li>
+<code>n = 10</code> inside <code>slice_max()</code> means “ten rows.” A bare <code>n</code> elsewhere (as in <code>count()</code> output) is a column holding counts. The same letter means different things in different places, and context tells you which.</li>
+<li>
+<code>desc()</code> flips a sort from smallest-first to largest-first.</li>
+</ul></section><section id="patterns-in-text-regular-expressions" class="level2" data-number="A.10"><h2 data-number="A.10" class="anchored" data-anchor-id="patterns-in-text-regular-expressions">
+<span class="header-section-number">A.10</span> Patterns in text: regular expressions</h2>
+<p>When we search text, we often need a <em>pattern</em> instead of a fixed word. A pattern language called <strong>regular expressions</strong> (or “regex”) does this. You do not need to learn it. You only need to recognize the few pieces this book uses.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead><tr class="header">
+<th>Piece</th>
+<th>Means</th>
+<th>Example</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>\\S+</code></td>
+<td>one or more non-space characters, i.e.&nbsp;a “word”</td>
+<td>
+<code>str_count(text, "\\S+")</code> counts words</td>
+</tr>
+<tr class="even">
+<td><code>^</code></td>
+<td>the start of the text</td>
+<td>
+<code>"^none"</code> matches text beginning with “none”</td>
+</tr>
+<tr class="odd">
+<td><code>$</code></td>
+<td>the end of the text</td>
+<td>
+<code>"none$"</code> matches text ending in “none”</td>
+</tr>
+<tr class="even">
+<td><code>\|</code></td>
+<td>or</td>
+<td>
+<code>"none\|nothing"</code> matches either</td>
+</tr>
+<tr class="odd">
+<td><code>?</code></td>
+<td>the previous character is optional</td>
+<td>
+<code>"n/?a"</code> matches “na” and “n/a”</td>
+</tr>
+<tr class="even">
+<td><code>\\d+</code></td>
+<td>one or more digits</td>
+<td>
+<code>"^\\d+$"</code> matches a text that is only a number</td>
+</tr>
+<tr class="odd">
+<td><code>.</code></td>
+<td>any one character</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>[ab]</code></td>
+<td>either “a” or “b”</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>In R you have to write a backslash twice (<code>\\</code>), because R treats a single backslash as a special signal. So <code>\\S+</code> is the pattern <code>\S+</code>. The block that defines our placeholder pattern in <code>R/helpers.R</code> is long but is built from just these pieces.</p>
+</section><section id="randomness-and-set.seed" class="level2" data-number="A.11"><h2 data-number="A.11" class="anchored" data-anchor-id="randomness-and-set.seed">
+<span class="header-section-number">A.11</span> Randomness and <code>set.seed()</code>
+</h2>
+<p>Some methods use random numbers: splitting data into a training and a test set, picking a random sample, or starting a topic model from a random guess. A computer’s “random” numbers are generated by a formula, and <code><a href="https://rdrr.io/r/base/Random.html">set.seed()</a></code> fixes where the formula starts.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html">set.seed</a></span><span class="op">(</span><span class="fl">664</span><span class="op">)</span>       <span class="co"># any whole number works; 664 is just our choice</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/sample.html">sample</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">10</span>, <span class="fl">3</span><span class="op">)</span>     <span class="co"># three random numbers from 1 to 10</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>If you run this block twice with the same seed, you get the same three numbers every time. That is why the book sets seeds before anything random: so that your results match the book’s and match each other when you re-run them. Change the seed and you get different (equally valid) random draws.</p>
+</section><section id="chunk-options-in-quarto" class="level2" data-number="A.12"><h2 data-number="A.12" class="anchored" data-anchor-id="chunk-options-in-quarto">
+<span class="header-section-number">A.12</span> Chunk options in Quarto</h2>
+<p>The gray code blocks in a chapter can begin with lines starting <code>#|</code>. These are instructions to Quarto, not to R.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead><tr class="header">
+<th>Option</th>
+<th>Means</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>#| label: fig-length</code></td>
+<td>A name for the block. Names beginning <code>fig-</code> make a numbered figure that the text can refer to</td>
+</tr>
+<tr class="even">
+<td><code>#| fig-cap: "..."</code></td>
+<td>The caption under a figure</td>
+</tr>
+<tr class="odd">
+<td><code>#| fig-height: 6</code></td>
+<td>The height of the figure, in inches</td>
+</tr>
+<tr class="even">
+<td><code>#| eval: false</code></td>
+<td>Show the code but do not run it</td>
+</tr>
+<tr class="odd">
+<td><code>#| message: false</code></td>
+<td>Hide the status messages some packages print</td>
+</tr>
+</tbody>
+</table></section><section id="common-errors-and-what-they-usually-mean" class="level2" data-number="A.13"><h2 data-number="A.13" class="anchored" data-anchor-id="common-errors-and-what-they-usually-mean">
+<span class="header-section-number">A.13</span> Common errors, and what they usually mean</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead><tr class="header">
+<th>Message</th>
+<th>Usual cause</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>could not find function "x"</code></td>
+<td>The package that contains <code>x</code> is not loaded. Run its <code><a href="https://rdrr.io/r/base/library.html">library()</a></code> line</td>
+</tr>
+<tr class="even">
+<td><code>object 'vcu' not found</code></td>
+<td>The block that creates <code>vcu</code> has not been run yet, or you restarted R. Run the chapter from the top</td>
+</tr>
+<tr class="odd">
+<td><code>there is no package called 'x'</code></td>
+<td>Install it with <code>install.packages("x")</code>
+</td>
+</tr>
+<tr class="even">
+<td><code>Can't find data/vcu_cares_long.csv</code></td>
+<td>You have not built the data file, or R is not working from the project folder. See <code>SETUP.md</code>
+</td>
+</tr>
+<tr class="odd">
+<td>
+<code>unexpected symbol</code> or <code>unexpected ')'</code>
+</td>
+<td>A typo: a missing comma, a missing closing bracket, or an extra one</td>
+</tr>
+</tbody>
+</table>
+<p>Two general tips. First, <strong>read the first line of an error message</strong>, since it often names the problem. Second, <strong>look at the line just above the one R complains about</strong>, since a missing bracket is usually reported on the line after the real mistake.</p>
+</section><section id="where-r-is-looking" class="level2" data-number="A.14"><h2 data-number="A.14" class="anchored" data-anchor-id="where-r-is-looking">
+<span class="header-section-number">A.14</span> Where R is “looking”</h2>
+<p>R reads and writes files relative to its <strong>working directory</strong>. The easiest way to be sure it is in the right place is to open the project by double-clicking <code>TextMining.Rproj</code>; RStudio then sets the working directory to the project folder. You can check with <code><a href="https://rdrr.io/r/base/getwd.html">getwd()</a></code> in the Console, and the answer should end in <code>text-mining</code>.</p>
+
+
+<!-- -->
+
+</section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const cellDetails = window.document.querySelectorAll(".cell details.code-fold");
+        for (let i=0; i<cellDetails.length; i++) {
+          const details = cellDetails[i];
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell div.sourceCode.cell-code");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script><nav class="page-navigation"><div class="nav-page nav-page-previous">
+      <a href="./references.html" class="pagination-link" aria-label="References">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">References</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./appendix-glossary.html" class="pagination-link" aria-label="Glossary">
+        <span class="nav-page-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Glossary</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># Reading R Code: A Short Guide {#sec-r-primer}</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>You do not need to be a programmer to follow this book. You do need to be able to *read* the code, so you know what each block is doing before you run it. This appendix covers the handful of ideas that appear on almost every page. If a chapter's code looks like a wall of symbols, come back here.</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">## Running code</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>R code lives in two places in this book.</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Code blocks in a chapter** (the gray boxes). You can copy any of them with the copy icon in the corner.</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Files in the project**, such as <span class="in">`R/helpers.R`</span>, which chapters load with <span class="in">`source()`</span>.</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>In RStudio, put the cursor on a line and press **Ctrl+Enter** (Cmd+Enter on a Mac) to run that line. Select several lines first to run them all. Output appears in the **Console** (text) or the **Plots** pane (charts). If you open a chapter (<span class="in">`.qmd`</span> file), each gray block has a small green "play" button that runs the whole block.</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>Run blocks **in order, from the top of the chapter**. Later blocks use things that earlier blocks created, so skipping ahead is the most common reason for an error such as <span class="in">`object 'vcu' not found`</span>.</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="fu">## Comments</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>Anything after a <span class="in">`#`</span> on a line is a comment: a note to the human reader that R ignores.</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a><span class="co"># This whole line is a comment</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="dv">5</span>   <span class="co"># and so is everything after the # on this line</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>Throughout the book we put short comments inside code to explain what a line is for.</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="fu">## Objects and the arrow</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>R stores things under names. The arrow <span class="in">`&lt;-`</span> means "take what is on the right and save it under the name on the left."</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>n_students <span class="ot">&lt;-</span> <span class="dv">1241</span>        <span class="co"># saves the number 1241 as n_students</span></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>greeting   <span class="ot">&lt;-</span> <span class="st">"hello"</span>     <span class="co"># saves a piece of text</span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>Read <span class="in">`&lt;-`</span> aloud as "gets." The thing you saved is called an **object**. Type its name on its own line to see what is inside it. Names are case-sensitive: <span class="in">`vcu`</span> and <span class="in">`VCU`</span> are different objects.</span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a><span class="fu">## Text, numbers, and TRUE/FALSE</span></span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Text** (called a *string* or *character* value) goes in quotes: <span class="in">`"hello"`</span>. Single or double quotes both work.</span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Numbers** have no quotes: <span class="in">`5`</span>, <span class="in">`3.14`</span>.</span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Logical values** are <span class="in">`TRUE`</span> or <span class="in">`FALSE`</span>. They come from questions you ask of the data, such as <span class="in">`n_words &lt;= 3`</span>, which is <span class="in">`TRUE`</span> for short answers and <span class="in">`FALSE`</span> for the rest.</span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a>The comparison symbols you will see are:</span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Symbol <span class="pp">|</span> Means <span class="pp">|</span></span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`==`</span> <span class="pp">|</span> is equal to (two equals signs; one <span class="in">`=`</span> is something else) <span class="pp">|</span></span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`!=`</span> <span class="pp">|</span> is not equal to <span class="pp">|</span></span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`&lt;`</span>, <span class="in">`&lt;=`</span>, <span class="in">`&gt;`</span>, <span class="in">`&gt;=`</span> <span class="pp">|</span> less than, at most, greater than, at least <span class="pp">|</span></span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`!`</span> <span class="pp">|</span> not (flips <span class="in">`TRUE`</span> and <span class="in">`FALSE`</span>) <span class="pp">|</span></span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`&amp;`</span> <span class="pp">|</span> and <span class="pp">|</span></span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`\|`</span> <span class="pp">|</span> or <span class="pp">|</span></span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`%in%`</span> <span class="pp">|</span> is one of the values in this list <span class="pp">|</span></span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a><span class="fu">## Functions and their arguments</span></span>
+<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a>A **function** is a named recipe: you hand it ingredients and it hands back a result. You call it by writing its name followed by parentheses. The ingredients inside the parentheses are called **arguments**.</span>
+<span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-70"><a href="#cb9-70" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-71"><a href="#cb9-71" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb9-72"><a href="#cb9-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-73"><a href="#cb9-73" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fl">3.14159</span>, <span class="at">digits =</span> <span class="dv">2</span>)</span>
+<span id="cb9-74"><a href="#cb9-74" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-75"><a href="#cb9-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-76"><a href="#cb9-76" aria-hidden="true" tabindex="-1"></a>Here <span class="in">`round`</span> is the function. <span class="in">`3.14159`</span> is the first argument (the number to round). <span class="in">`digits = 2`</span> is a *named* argument: it says "keep two decimal places." The answer is <span class="in">`3.14`</span>.</span>
+<span id="cb9-77"><a href="#cb9-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-78"><a href="#cb9-78" aria-hidden="true" tabindex="-1"></a>Two things to notice:</span>
+<span id="cb9-79"><a href="#cb9-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-80"><a href="#cb9-80" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Some arguments are written with a name (<span class="in">`digits = 2`</span>) and some without. If you leave out the name, R assumes the arguments are in the order the function expects. Named arguments are clearer, so we use them whenever the meaning would not be obvious.</span>
+<span id="cb9-81"><a href="#cb9-81" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Most functions have **options** you can change by adding named arguments. When this book says "an option," it means exactly this. To see all the options of any function, type <span class="in">`?round`</span> in the Console, which opens its help page.</span>
+<span id="cb9-82"><a href="#cb9-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-83"><a href="#cb9-83" aria-hidden="true" tabindex="-1"></a>Functions can be nested, with one inside another. R works from the inside out: in <span class="in">`round(mean(x), 2)`</span>, it first computes <span class="in">`mean(x)`</span> and then rounds that.</span>
+<span id="cb9-84"><a href="#cb9-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-85"><a href="#cb9-85" aria-hidden="true" tabindex="-1"></a><span class="fu">## Packages</span></span>
+<span id="cb9-86"><a href="#cb9-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-87"><a href="#cb9-87" aria-hidden="true" tabindex="-1"></a>R comes with basic tools, and **packages** add more. You install a package once with <span class="in">`install.packages("name")`</span>, and then load it in every new session with <span class="in">`library(name)`</span>.</span>
+<span id="cb9-88"><a href="#cb9-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-91"><a href="#cb9-91" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-92"><a href="#cb9-92" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb9-93"><a href="#cb9-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-94"><a href="#cb9-94" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"tidytext"</span>)   <span class="co"># once per computer</span></span>
+<span id="cb9-95"><a href="#cb9-95" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidytext)              <span class="co"># once per R session</span></span>
+<span id="cb9-96"><a href="#cb9-96" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-97"><a href="#cb9-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-98"><a href="#cb9-98" aria-hidden="true" tabindex="-1"></a>Chapters begin by loading the packages they need. If you see <span class="in">`could not find function "unnest_tokens"`</span>, it almost always means the package that contains it (here, <span class="in">`tidytext`</span>) has not been loaded with <span class="in">`library()`</span>.</span>
+<span id="cb9-99"><a href="#cb9-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-100"><a href="#cb9-100" aria-hidden="true" tabindex="-1"></a>You can also name the package directly with <span class="in">`::`</span>, as in <span class="in">`stats::sd(x)`</span>. That is useful when two packages contain functions with the same name.</span>
+<span id="cb9-101"><a href="#cb9-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-102"><a href="#cb9-102" aria-hidden="true" tabindex="-1"></a><span class="fu">## Data frames</span></span>
+<span id="cb9-103"><a href="#cb9-103" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-104"><a href="#cb9-104" aria-hidden="true" tabindex="-1"></a>Most of what we analyze is stored in a **data frame**: a table where each **row** is one observation and each **column** is one variable. This book uses a modern version called a *tibble*, which prints more tidily.</span>
+<span id="cb9-105"><a href="#cb9-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-106"><a href="#cb9-106" aria-hidden="true" tabindex="-1"></a>In our data, each row is one answer, and the columns include <span class="in">`text`</span> (what the student said), <span class="in">`question`</span> (which question it answers), and <span class="in">`level`</span> (undergraduate or graduate).</span>
+<span id="cb9-107"><a href="#cb9-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-110"><a href="#cb9-110" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-111"><a href="#cb9-111" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb9-112"><a href="#cb9-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-113"><a href="#cb9-113" aria-hidden="true" tabindex="-1"></a>vcu<span class="sc">$</span>text          <span class="co"># the text column, as a list of values</span></span>
+<span id="cb9-114"><a href="#cb9-114" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(vcu)         <span class="co"># how many rows</span></span>
+<span id="cb9-115"><a href="#cb9-115" aria-hidden="true" tabindex="-1"></a><span class="fu">ncol</span>(vcu)         <span class="co"># how many columns</span></span>
+<span id="cb9-116"><a href="#cb9-116" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-117"><a href="#cb9-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-118"><a href="#cb9-118" aria-hidden="true" tabindex="-1"></a>The <span class="in">`$`</span> picks out one column by name.</span>
+<span id="cb9-119"><a href="#cb9-119" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-120"><a href="#cb9-120" aria-hidden="true" tabindex="-1"></a><span class="fu">## The pipe: `|&gt;`</span></span>
+<span id="cb9-121"><a href="#cb9-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-122"><a href="#cb9-122" aria-hidden="true" tabindex="-1"></a>The pipe is the symbol you will see most. It means "take what is on my left and use it as the first ingredient of the function on my right." It lets you write a series of steps in the order you would say them.</span>
+<span id="cb9-123"><a href="#cb9-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-124"><a href="#cb9-124" aria-hidden="true" tabindex="-1"></a>Without the pipe, steps nest inside each other and you read from the inside out:</span>
+<span id="cb9-125"><a href="#cb9-125" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-128"><a href="#cb9-128" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-129"><a href="#cb9-129" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb9-130"><a href="#cb9-130" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-131"><a href="#cb9-131" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">arrange</span>(<span class="fu">filter</span>(vcu, level <span class="sc">==</span> <span class="st">"Graduate"</span>), question), <span class="dv">5</span>)</span>
+<span id="cb9-132"><a href="#cb9-132" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-133"><a href="#cb9-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-134"><a href="#cb9-134" aria-hidden="true" tabindex="-1"></a>With the pipe, you read from top to bottom, the way you would describe it in words:</span>
+<span id="cb9-135"><a href="#cb9-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-138"><a href="#cb9-138" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-139"><a href="#cb9-139" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb9-140"><a href="#cb9-140" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-141"><a href="#cb9-141" aria-hidden="true" tabindex="-1"></a>vcu <span class="sc">|&gt;</span></span>
+<span id="cb9-142"><a href="#cb9-142" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(level <span class="sc">==</span> <span class="st">"Graduate"</span>) <span class="sc">|&gt;</span>   <span class="co"># keep only graduate students</span></span>
+<span id="cb9-143"><a href="#cb9-143" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(question) <span class="sc">|&gt;</span>             <span class="co"># sort by question</span></span>
+<span id="cb9-144"><a href="#cb9-144" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">5</span>)                          <span class="co"># show the first five rows</span></span>
+<span id="cb9-145"><a href="#cb9-145" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-146"><a href="#cb9-146" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-147"><a href="#cb9-147" aria-hidden="true" tabindex="-1"></a>Read <span class="in">`|&gt;`</span> as "and then." Both versions do exactly the same thing. Starting a new line after each <span class="in">`|&gt;`</span> is just a layout habit that makes the steps easy to follow. (You will sometimes see <span class="in">`%&gt;%`</span> in other people's code. It does the same job.)</span>
+<span id="cb9-148"><a href="#cb9-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-149"><a href="#cb9-149" aria-hidden="true" tabindex="-1"></a><span class="fu">## The verbs we use all the time</span></span>
+<span id="cb9-150"><a href="#cb9-150" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-151"><a href="#cb9-151" aria-hidden="true" tabindex="-1"></a>Most of the data manipulation in this book uses a small family of functions from the <span class="in">`dplyr`</span> package, part of the <span class="in">`tidyverse`</span>. Each does one thing and is named for it.</span>
+<span id="cb9-152"><a href="#cb9-152" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-153"><a href="#cb9-153" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Function <span class="pp">|</span> What it does <span class="pp">|</span> Example <span class="pp">|</span></span>
+<span id="cb9-154"><a href="#cb9-154" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb9-155"><a href="#cb9-155" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`filter()`</span> <span class="pp">|</span> Keep only rows that meet a condition <span class="pp">|</span> <span class="in">`filter(level == "Graduate")`</span> <span class="pp">|</span></span>
+<span id="cb9-156"><a href="#cb9-156" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`select()`</span> <span class="pp">|</span> Keep only certain columns <span class="pp">|</span> <span class="in">`select(question, text)`</span> <span class="pp">|</span></span>
+<span id="cb9-157"><a href="#cb9-157" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`mutate()`</span> <span class="pp">|</span> Add or change a column <span class="pp">|</span> <span class="in">`mutate(n_words = str_count(text, "\\S+"))`</span> <span class="pp">|</span></span>
+<span id="cb9-158"><a href="#cb9-158" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`count()`</span> <span class="pp">|</span> Count rows, optionally by group <span class="pp">|</span> <span class="in">`count(question)`</span> <span class="pp">|</span></span>
+<span id="cb9-159"><a href="#cb9-159" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`arrange()`</span> <span class="pp">|</span> Sort rows <span class="pp">|</span> <span class="in">`arrange(desc(n))`</span> (<span class="in">`desc`</span> = largest first) <span class="pp">|</span></span>
+<span id="cb9-160"><a href="#cb9-160" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`group_by()`</span> <span class="pp">|</span> Do the next steps separately for each group <span class="pp">|</span> <span class="in">`group_by(question)`</span> <span class="pp">|</span></span>
+<span id="cb9-161"><a href="#cb9-161" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`summarise()`</span> <span class="pp">|</span> Collapse each group to one row of summary numbers <span class="pp">|</span> <span class="in">`summarise(mean = mean(net))`</span> <span class="pp">|</span></span>
+<span id="cb9-162"><a href="#cb9-162" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`slice_max()`</span> <span class="pp">|</span> Keep the rows with the largest values <span class="pp">|</span> <span class="in">`slice_max(n, n = 10)`</span> <span class="pp">|</span></span>
+<span id="cb9-163"><a href="#cb9-163" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-164"><a href="#cb9-164" aria-hidden="true" tabindex="-1"></a>Three habits will make code easier to read:</span>
+<span id="cb9-165"><a href="#cb9-165" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-166"><a href="#cb9-166" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`group_by()`</span> stays switched on until you call <span class="in">`ungroup()`</span>. We often add <span class="in">`ungroup()`</span> after a grouped summary so that later steps are not accidentally done group by group.</span>
+<span id="cb9-167"><a href="#cb9-167" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`n = 10`</span> inside <span class="in">`slice_max()`</span> means "ten rows." A bare <span class="in">`n`</span> elsewhere (as in <span class="in">`count()`</span> output) is a column holding counts. The same letter means different things in different places, and context tells you which.</span>
+<span id="cb9-168"><a href="#cb9-168" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`desc()`</span> flips a sort from smallest-first to largest-first.</span>
+<span id="cb9-169"><a href="#cb9-169" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-170"><a href="#cb9-170" aria-hidden="true" tabindex="-1"></a><span class="fu">## Patterns in text: regular expressions</span></span>
+<span id="cb9-171"><a href="#cb9-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-172"><a href="#cb9-172" aria-hidden="true" tabindex="-1"></a>When we search text, we often need a *pattern* instead of a fixed word. A pattern language called **regular expressions** (or "regex") does this. You do not need to learn it. You only need to recognize the few pieces this book uses.</span>
+<span id="cb9-173"><a href="#cb9-173" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-174"><a href="#cb9-174" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Piece <span class="pp">|</span> Means <span class="pp">|</span> Example <span class="pp">|</span></span>
+<span id="cb9-175"><a href="#cb9-175" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb9-176"><a href="#cb9-176" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`\\S+`</span> <span class="pp">|</span> one or more non-space characters, i.e. a "word" <span class="pp">|</span> <span class="in">`str_count(text, "\\S+")`</span> counts words <span class="pp">|</span></span>
+<span id="cb9-177"><a href="#cb9-177" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`^`</span> <span class="pp">|</span> the start of the text <span class="pp">|</span> <span class="in">`"^none"`</span> matches text beginning with "none" <span class="pp">|</span></span>
+<span id="cb9-178"><a href="#cb9-178" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`$`</span> <span class="pp">|</span> the end of the text <span class="pp">|</span> <span class="in">`"none$"`</span> matches text ending in "none" <span class="pp">|</span></span>
+<span id="cb9-179"><a href="#cb9-179" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`\|`</span> <span class="pp">|</span> or <span class="pp">|</span> <span class="in">`"none\|nothing"`</span> matches either <span class="pp">|</span></span>
+<span id="cb9-180"><a href="#cb9-180" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`?`</span> <span class="pp">|</span> the previous character is optional <span class="pp">|</span> <span class="in">`"n/?a"`</span> matches "na" and "n/a" <span class="pp">|</span></span>
+<span id="cb9-181"><a href="#cb9-181" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`\\d+`</span> <span class="pp">|</span> one or more digits <span class="pp">|</span> <span class="in">`"^\\d+$"`</span> matches a text that is only a number <span class="pp">|</span></span>
+<span id="cb9-182"><a href="#cb9-182" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`.`</span> <span class="pp">|</span> any one character <span class="pp">|</span> <span class="pp">|</span></span>
+<span id="cb9-183"><a href="#cb9-183" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`[ab]`</span> <span class="pp">|</span> either "a" or "b" <span class="pp">|</span> <span class="pp">|</span></span>
+<span id="cb9-184"><a href="#cb9-184" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-185"><a href="#cb9-185" aria-hidden="true" tabindex="-1"></a>In R you have to write a backslash twice (<span class="in">`\\`</span>), because R treats a single backslash as a special signal. So <span class="in">`\\S+`</span> is the pattern <span class="in">`\S+`</span>. The block that defines our placeholder pattern in <span class="in">`R/helpers.R`</span> is long but is built from just these pieces.</span>
+<span id="cb9-186"><a href="#cb9-186" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-187"><a href="#cb9-187" aria-hidden="true" tabindex="-1"></a><span class="fu">## Randomness and `set.seed()`</span></span>
+<span id="cb9-188"><a href="#cb9-188" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-189"><a href="#cb9-189" aria-hidden="true" tabindex="-1"></a>Some methods use random numbers: splitting data into a training and a test set, picking a random sample, or starting a topic model from a random guess. A computer's "random" numbers are generated by a formula, and <span class="in">`set.seed()`</span> fixes where the formula starts.</span>
+<span id="cb9-190"><a href="#cb9-190" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-193"><a href="#cb9-193" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-194"><a href="#cb9-194" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb9-195"><a href="#cb9-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-196"><a href="#cb9-196" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">664</span>)       <span class="co"># any whole number works; 664 is just our choice</span></span>
+<span id="cb9-197"><a href="#cb9-197" aria-hidden="true" tabindex="-1"></a><span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">3</span>)     <span class="co"># three random numbers from 1 to 10</span></span>
+<span id="cb9-198"><a href="#cb9-198" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-199"><a href="#cb9-199" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-200"><a href="#cb9-200" aria-hidden="true" tabindex="-1"></a>If you run this block twice with the same seed, you get the same three numbers every time. That is why the book sets seeds before anything random: so that your results match the book's and match each other when you re-run them. Change the seed and you get different (equally valid) random draws.</span>
+<span id="cb9-201"><a href="#cb9-201" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-202"><a href="#cb9-202" aria-hidden="true" tabindex="-1"></a><span class="fu">## Chunk options in Quarto</span></span>
+<span id="cb9-203"><a href="#cb9-203" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-204"><a href="#cb9-204" aria-hidden="true" tabindex="-1"></a>The gray code blocks in a chapter can begin with lines starting <span class="in">`#|`</span>. These are instructions to Quarto, not to R.</span>
+<span id="cb9-205"><a href="#cb9-205" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-206"><a href="#cb9-206" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Option <span class="pp">|</span> Means <span class="pp">|</span></span>
+<span id="cb9-207"><a href="#cb9-207" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb9-208"><a href="#cb9-208" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`#| label: fig-length`</span> <span class="pp">|</span> A name for the block. Names beginning <span class="in">`fig-`</span> make a numbered figure that the text can refer to <span class="pp">|</span></span>
+<span id="cb9-209"><a href="#cb9-209" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`#| fig-cap: "..."`</span> <span class="pp">|</span> The caption under a figure <span class="pp">|</span></span>
+<span id="cb9-210"><a href="#cb9-210" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`#| fig-height: 6`</span> <span class="pp">|</span> The height of the figure, in inches <span class="pp">|</span></span>
+<span id="cb9-211"><a href="#cb9-211" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`#| eval: false`</span> <span class="pp">|</span> Show the code but do not run it <span class="pp">|</span></span>
+<span id="cb9-212"><a href="#cb9-212" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`#| message: false`</span> <span class="pp">|</span> Hide the status messages some packages print <span class="pp">|</span></span>
+<span id="cb9-213"><a href="#cb9-213" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-214"><a href="#cb9-214" aria-hidden="true" tabindex="-1"></a><span class="fu">## Common errors, and what they usually mean</span></span>
+<span id="cb9-215"><a href="#cb9-215" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-216"><a href="#cb9-216" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Message <span class="pp">|</span> Usual cause <span class="pp">|</span></span>
+<span id="cb9-217"><a href="#cb9-217" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb9-218"><a href="#cb9-218" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`could not find function "x"`</span> <span class="pp">|</span> The package that contains <span class="in">`x`</span> is not loaded. Run its <span class="in">`library()`</span> line <span class="pp">|</span></span>
+<span id="cb9-219"><a href="#cb9-219" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`object 'vcu' not found`</span> <span class="pp">|</span> The block that creates <span class="in">`vcu`</span> has not been run yet, or you restarted R. Run the chapter from the top <span class="pp">|</span></span>
+<span id="cb9-220"><a href="#cb9-220" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`there is no package called 'x'`</span> <span class="pp">|</span> Install it with <span class="in">`install.packages("x")`</span> <span class="pp">|</span></span>
+<span id="cb9-221"><a href="#cb9-221" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`Can't find data/vcu_cares_long.csv`</span> <span class="pp">|</span> You have not built the data file, or R is not working from the project folder. See <span class="in">`SETUP.md`</span> <span class="pp">|</span></span>
+<span id="cb9-222"><a href="#cb9-222" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`unexpected symbol`</span> or <span class="in">`unexpected ')'`</span> <span class="pp">|</span> A typo: a missing comma, a missing closing bracket, or an extra one <span class="pp">|</span></span>
+<span id="cb9-223"><a href="#cb9-223" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-224"><a href="#cb9-224" aria-hidden="true" tabindex="-1"></a>Two general tips. First, **read the first line of an error message**, since it often names the problem. Second, **look at the line just above the one R complains about**, since a missing bracket is usually reported on the line after the real mistake.</span>
+<span id="cb9-225"><a href="#cb9-225" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-226"><a href="#cb9-226" aria-hidden="true" tabindex="-1"></a><span class="fu">## Where R is "looking"</span></span>
+<span id="cb9-227"><a href="#cb9-227" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-228"><a href="#cb9-228" aria-hidden="true" tabindex="-1"></a>R reads and writes files relative to its **working directory**. The easiest way to be sure it is in the right place is to open the project by double-clicking <span class="in">`TextMining.Rproj`</span>; RStudio then sets the working directory to the project folder. You can check with <span class="in">`getwd()`</span> in the Console, and the answer should end in <span class="in">`text-mining`</span>.</span>
+</code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+<footer class="footer"><div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Text Mining in R</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/mikediam123/text-mining/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+<p>Built with <a href="https://quarto.org">Quarto</a></p>
+</div>
+  </div>
+</footer>
+
+
+</body></html>

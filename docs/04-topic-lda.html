@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="description" content="A hands-on introduction to text mining for lab members, built around open-ended interviews with VCU students. Moves from descriptive methods (word counts, TF-IDF) to topic models, sentiment analysis, and supervised learning.">
+<title>4&nbsp; Topic Models I: LDA – Text Mining in R</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./05-topic-stm.html" rel="next">
+<link href="./03-tf-idf.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-a09481bce8a2314b82ccc09e3e79ae8c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+</head>
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top"><nav class="quarto-secondary-nav"><div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./04-topic-lda.html">Finding Structure</a></li><li class="breadcrumb-item"><a href="./04-topic-lda.html"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Topic Models I: LDA</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav></header><!-- content --><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto"><div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Text Mining in R</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/mikediam123/text-mining" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Welcome</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Getting Started</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./01-the-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">The Data</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./02-tokens.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Tokens</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Descriptive Methods</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./03-tf-idf.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Term Frequency and TF-IDF</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Finding Structure</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./04-topic-lda.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Topic Models I: LDA</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./05-topic-stm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Topic Models II: Structural Topic Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./06-sentiment.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Sentiment Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./07-supervised.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Supervised Learning: Predicting Topic Codes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./08-embeddings.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Embeddings: Using a Pretrained Language Model</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./09-wrapping-up.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Wrapping Up</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./appendix-r-primer.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Reading R Code: A Short Guide</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./appendix-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Glossary</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+    </ul>
+</div>
+</nav><div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active"><h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+<li><a href="#the-idea-in-plain-terms" id="toc-the-idea-in-plain-terms" class="nav-link active" data-scroll-target="#the-idea-in-plain-terms"><span class="header-section-number">4.1</span> The idea in plain terms</a></li>
+  <li><a href="#choosing-the-documents" id="toc-choosing-the-documents" class="nav-link" data-scroll-target="#choosing-the-documents"><span class="header-section-number">4.2</span> Choosing the documents</a></li>
+  <li><a href="#build-the-document-term-matrix" id="toc-build-the-document-term-matrix" class="nav-link" data-scroll-target="#build-the-document-term-matrix"><span class="header-section-number">4.3</span> Build the document-term matrix</a></li>
+  <li><a href="#fit-the-model" id="toc-fit-the-model" class="nav-link" data-scroll-target="#fit-the-model"><span class="header-section-number">4.4</span> Fit the model</a></li>
+  <li>
+<a href="#the-topics-beta" id="toc-the-topics-beta" class="nav-link" data-scroll-target="#the-topics-beta"><span class="header-section-number">4.5</span> The topics: beta</a>
+  <ul class="collapse">
+<li><a href="#reading-the-chart-from-our-run" id="toc-reading-the-chart-from-our-run" class="nav-link" data-scroll-target="#reading-the-chart-from-our-run"><span class="header-section-number">4.5.1</span> Reading the chart from our run</a></li>
+  <li><a href="#words-that-are-common-everywhere-crowd-the-lists" id="toc-words-that-are-common-everywhere-crowd-the-lists" class="nav-link" data-scroll-target="#words-that-are-common-everywhere-crowd-the-lists"><span class="header-section-number">4.5.2</span> Words that are common everywhere crowd the lists</a></li>
+  </ul>
+</li>
+  <li><a href="#the-documents-gamma" id="toc-the-documents-gamma" class="nav-link" data-scroll-target="#the-documents-gamma"><span class="header-section-number">4.6</span> The documents: gamma</a></li>
+  <li><a href="#prevalence-how-big-is-each-topic" id="toc-prevalence-how-big-is-each-topic" class="nav-link" data-scroll-target="#prevalence-how-big-is-each-topic"><span class="header-section-number">4.7</span> Prevalence: how big is each topic?</a></li>
+  <li><a href="#always-read-the-documents" id="toc-always-read-the-documents" class="nav-link" data-scroll-target="#always-read-the-documents"><span class="header-section-number">4.8</span> Always read the documents</a></li>
+  <li>
+<a href="#a-check-against-the-interviewers-codes" id="toc-a-check-against-the-interviewers-codes" class="nav-link" data-scroll-target="#a-check-against-the-interviewers-codes"><span class="header-section-number">4.9</span> A check against the interviewers’ codes</a>
+  <ul class="collapse">
+<li><a href="#reading-the-chart-from-our-run-1" id="toc-reading-the-chart-from-our-run-1" class="nav-link" data-scroll-target="#reading-the-chart-from-our-run-1"><span class="header-section-number">4.9.1</span> Reading the chart from our run</a></li>
+  </ul>
+</li>
+  <li><a href="#how-many-topics" id="toc-how-many-topics" class="nav-link" data-scroll-target="#how-many-topics"><span class="header-section-number">4.10</span> How many topics?</a></li>
+  <li><a href="#cautions" id="toc-cautions" class="nav-link" data-scroll-target="#cautions"><span class="header-section-number">4.11</span> Cautions</a></li>
+  <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary"><span class="header-section-number">4.12</span> Summary</a></li>
+  </ul><div class="toc-actions"><ul><li><a href="https://github.com/mikediam123/text-mining/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./04-topic-lda.html">Finding Structure</a></li><li class="breadcrumb-item"><a href="./04-topic-lda.html"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Topic Models I: LDA</span></a></li></ol></nav><div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title"><span id="sec-lda" class="quarto-section-identifier"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Topic Models I: LDA</span></span></h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header><p><strong>Data for this chapter:</strong> <code>data/vcu_cares_long.csv</code></p>
+<p>TF-IDF told us which words are distinctive of a group we had already defined, such as “undergraduates.” A <strong>topic model</strong> goes the other way. It proposes the groups. Given only the words in each document, it finds sets of words that tend to appear together and calls each set a <strong>topic</strong>.</p>
+<p>The most widely used topic model is <strong>Latent Dirichlet Allocation</strong>, or <strong>LDA</strong> (Blei, Ng, &amp; Jordan, 2003). The name is intimidating, but the idea is not, as the next section shows.</p>
+<p>By the end of this chapter you will be able to explain what LDA assumes, fit a model, read its two main outputs (called <em>beta</em> and <em>gamma</em>), and check whether the topics it found are real.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html">source</a></span><span class="op">(</span><span class="st">"R/helpers.R"</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://juliasilge.github.io/tidytext/">tidytext</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va">topicmodels</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">vcu</span> <span class="op">&lt;-</span> <span class="fu">load_vcu</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>topicmodels</code> is the package that fits the LDA model. <code>tidytext</code> (loaded as before) provides helpers that turn the model’s output into tables we can work with.</p>
+<section id="the-idea-in-plain-terms" class="level2" data-number="4.1"><h2 data-number="4.1" class="anchored" data-anchor-id="the-idea-in-plain-terms">
+<span class="header-section-number">4.1</span> The idea in plain terms</h2>
+<p>Imagine you could look inside a pile of answers and see that some are about housing (rent, dorms, repairs), some about money (aid, tuition, costs), and some about advising (advisors, appointments, registration). Nobody labeled them; you just notice that certain words keep turning up together. A topic model does this noticing automatically.</p>
+<p>LDA works by imagining a simple story about how every document was written:</p>
+<ol type="1">
+<li>Each document has its own <strong>mix of topics</strong>, such as 60% topic A and 40% topic B.</li>
+<li>Each topic is a <strong>list of words with probabilities</strong>. Topic A might make “housing,” “rent,” and “dorm” likely, and “advisor” unlikely.</li>
+<li>To write each word of a document, pick a topic according to the document’s mix, then pick a word from that topic’s list.</li>
+</ol>
+<p>Of course, nobody really writes this way. But the story is a useful fiction, because it can be run <strong>backward</strong>. We observe only the words. LDA searches for the topic word-lists and the document mixes that would most plausibly have produced the words we see.</p>
+<p>The two things it gives back have Greek-letter nicknames that you will see in all the software:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead><tr class="header">
+<th>Name</th>
+<th>What it is</th>
+<th>Question it answers</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>
+<strong>beta</strong> (β)</td>
+<td>For each topic, how likely each word is</td>
+<td>“What is this topic about?”</td>
+</tr>
+<tr class="even">
+<td>
+<strong>gamma</strong> (γ)</td>
+<td>For each document, how much of it belongs to each topic</td>
+<td>“What is this document about?”</td>
+</tr>
+</tbody>
+</table>
+<p>Three things to keep in mind from the start:</p>
+<ul>
+<li>A <strong>topic is a list of words, not a label.</strong> The model does not know that topic 3 is “housing.” You read the top words and name it yourself.</li>
+<li>
+<strong>You choose the number of topics, K.</strong> The data do not tell you the right K.</li>
+<li>
+<strong>Documents mix topics.</strong> An answer can be partly about advising and partly about money.</li>
+</ul></section><section id="choosing-the-documents" class="level2" data-number="4.2"><h2 data-number="4.2" class="anchored" data-anchor-id="choosing-the-documents">
+<span class="header-section-number">4.2</span> Choosing the documents</h2>
+<p>LDA learns from words that appear <em>together within a document</em>. Our answers have a median of about a dozen words, and after stop-word removal, six or seven. That is too little for patterns of togetherness to show up.</p>
+<p>The fix is to make the document bigger. We combine each student’s answers (strength, concern, and ideas) into one document. Each student’s document then has a few dozen words, enough to reveal which words travel together.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">stops</span> <span class="op">&lt;-</span> <span class="va">stop_words</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="va">lexicon</span> <span class="op">==</span> <span class="st">"snowball"</span><span class="op">)</span></span>
+<span><span class="va">custom_stops</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="op">(</span>word <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"vcu"</span>, <span class="st">"student"</span>, <span class="st">"students"</span>, <span class="st">"like"</span>,</span>
+<span>                                <span class="st">"get"</span>, <span class="st">"just"</span>, <span class="st">"really"</span>, <span class="st">"also"</span>, <span class="st">"can"</span>,</span>
+<span>                                <span class="st">"e"</span>, <span class="st">"g"</span>, <span class="st">"lot"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tokens</span> <span class="op">&lt;-</span> <span class="va">vcu</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://juliasilge.github.io/tidytext/reference/unnest_tokens.html">unnest_tokens</a></span><span class="op">(</span><span class="va">word</span>, <span class="va">text</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">anti_join</span><span class="op">(</span><span class="va">stops</span>, by <span class="op">=</span> <span class="st">"word"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">anti_join</span><span class="op">(</span><span class="va">custom_stops</span>, by <span class="op">=</span> <span class="st">"word"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="op">!</span><span class="fu">str_detect</span><span class="op">(</span><span class="va">word</span>, <span class="st">"^\\d+$"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Keep words used in at least 5 different students' answers</span></span>
+<span><span class="va">vocab</span> <span class="op">&lt;-</span> <span class="va">tokens</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">distinct</span><span class="op">(</span><span class="va">resp_id</span>, <span class="va">word</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">count</span><span class="op">(</span><span class="va">word</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="va">n</span> <span class="op">&gt;=</span> <span class="fl">5</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">pull</span><span class="op">(</span><span class="va">word</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">student_counts</span> <span class="op">&lt;-</span> <span class="va">tokens</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="va">word</span> <span class="op"><a href="https://rdrr.io/r/base/match.html">%in%</a></span> <span class="va">vocab</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">count</span><span class="op">(</span><span class="va">resp_id</span>, <span class="va">word</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Drop students left with too few words to say anything</span></span>
+<span><span class="va">keep</span> <span class="op">&lt;-</span> <span class="va">student_counts</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">group_by</span><span class="op">(</span><span class="va">resp_id</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">&gt;=</span> <span class="fl">5</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">ungroup</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">n_distinct</span><span class="op">(</span><span class="va">keep</span><span class="op">$</span><span class="va">resp_id</span><span class="op">)</span>; <span class="fu">n_distinct</span><span class="op">(</span><span class="va">keep</span><span class="op">$</span><span class="va">word</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1236</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 419</code></pre>
+</div>
+</div>
+<p>This block does four jobs.</p>
+<ol type="1">
+<li>
+<strong>Tokenize and clean</strong> (the first <code>tokens &lt;-</code> step). It is the same as in the last two chapters: split into words, remove stop words and bare numbers. (We added “e,” “g,” and “lot” to the domain stop words because they were noise.)</li>
+<li>
+<strong>Build a vocabulary</strong> (<code>vocab</code>). <code>distinct(resp_id, word)</code> keeps one row per student-word pair, so a word used five times by one student still counts once. <code>count(word)</code> then counts how many <em>different students</em> used each word, and <code>filter(n &gt;= 5)</code> keeps words used by at least five students. <code>pull(word)</code> turns the result into a plain list of words. This pruning is standard: a word used by only one or two students cannot help define a topic, and it slows the model down.</li>
+<li>
+<strong>Count words per student</strong> (<code>student_counts</code>). <code>filter(word %in% vocab)</code> keeps only the vocabulary words, and <code>count(resp_id, word)</code> counts each word within each student. This is our “documents” table: one row per student-word pair, with a count.</li>
+<li>
+<strong>Drop thin documents</strong> (<code>keep</code>). <code>group_by(resp_id)</code> followed by <code>filter(sum(n) &gt;= 5)</code> keeps only students with at least five total words left. Inside a grouped <code><a href="https://rdrr.io/r/stats/filter.html">filter()</a></code>, <code>sum(n)</code> is calculated within each student, not across the whole table.</li>
+</ol>
+<p>The last line reports how many students (documents) and how many distinct words (the vocabulary) remain. <code>n_distinct()</code> counts unique values.</p>
+</section><section id="build-the-document-term-matrix" class="level2" data-number="4.3"><h2 data-number="4.3" class="anchored" data-anchor-id="build-the-document-term-matrix">
+<span class="header-section-number">4.3</span> Build the document-term matrix</h2>
+<p>LDA wants a <strong>document-term matrix</strong>: a grid with one row per document, one column per word, and the count of that word in that document in each cell. It is mostly zeros, because each student uses only a small part of the vocabulary. Such a grid is called <em>sparse</em>, and the software stores it compactly.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">dtm</span> <span class="op">&lt;-</span> <span class="va">keep</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://juliasilge.github.io/tidytext/reference/document_term_casters.html">cast_dtm</a></span><span class="op">(</span>document <span class="op">=</span> <span class="va">resp_id</span>, term <span class="op">=</span> <span class="va">word</span>, value <span class="op">=</span> <span class="va">n</span><span class="op">)</span></span>
+<span><span class="va">dtm</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;&lt;DocumentTermMatrix (documents: 1236, terms: 419)&gt;&gt;
+Non-/sparse entries: 28781/489103
+Sparsity           : 94%
+Maximal term length: 14
+Weighting          : term frequency (tf)</code></pre>
+</div>
+</div>
+<p><code><a href="https://juliasilge.github.io/tidytext/reference/document_term_casters.html">cast_dtm()</a></code> converts our long table into that grid. Its three options say which column holds the document (<code>resp_id</code>), the term (<code>word</code>), and the value to put in the cells (<code>n</code>, the count). Printing <code>dtm</code> shows its size and how sparse it is: here, about 1,200 students (rows) by about 400 words (columns), and a “sparsity” of about 94%, which means 94% of the cells are zero.</p>
+</section><section id="fit-the-model" class="level2" data-number="4.4"><h2 data-number="4.4" class="anchored" data-anchor-id="fit-the-model">
+<span class="header-section-number">4.4</span> Fit the model</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">K</span> <span class="op">&lt;-</span> <span class="fl">6</span></span>
+<span></span>
+<span><span class="co"># alpha controls how mixed each document is. We fix it at a small value so that</span></span>
+<span><span class="co"># documents lean toward a few topics (see the note below for why this matters).</span></span>
+<span><span class="va">lda_control</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">664</span>, alpha <span class="op">=</span> <span class="fl">0.1</span>, estimate.alpha <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">lda</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/topicmodels/man/lda.html">LDA</a></span><span class="op">(</span><span class="va">dtm</span>, k <span class="op">=</span> <span class="va">K</span>, control <span class="op">=</span> <span class="va">lda_control</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<ul>
+<li>
+<code>K &lt;- 6</code> saves the number of topics under a name, so that we can change it in one place.</li>
+<li>
+<code>lda_control &lt;- list(...)</code> bundles the model’s settings in one place, so that we can reuse them later. <code>seed = 664</code> fixes the random starting point (see <a href="appendix-r-primer.html" class="quarto-xref"><span>Appendix A</span></a>): LDA starts from a random guess and can land in different places on different runs, so fixing the seed makes your results reproducible. <code>alpha</code> and <code>estimate.alpha</code> are explained next.</li>
+<li>
+<code><a href="https://rdrr.io/pkg/topicmodels/man/lda.html">LDA()</a></code> fits the model. The first argument is the matrix; <code>k</code> is the number of topics; and <code>control</code> passes the settings.</li>
+</ul>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Why we set <code>alpha</code> by hand: a model that quietly fails
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Alpha</strong> controls how <em>mixed</em> each document is. A small alpha says “documents lean toward a few topics.” A large alpha says “documents are an even blend of every topic.”</p>
+<p>By default, <code><a href="https://rdrr.io/pkg/topicmodels/man/lda.html">LDA()</a></code> <em>estimates</em> alpha from the data. On our short documents, that estimate ran away: when we tried it, the software chose an alpha of about 55. That is so large that every student came out as an almost perfectly even blend of all six topics (each topic about 17%, which is 1/6), and the six topic word lists were nearly interchangeable (“campus,” “help,” “support,” “experience”). The model ran without any error or warning. It simply learned nothing.</p>
+<p>Fixing alpha at 0.1 (<code>alpha = 0.1, estimate.alpha = FALSE</code>) tells the model to expect documents that lean toward a few topics, and the topics then separate. You can see the change directly: with the default, the average share of each student’s strongest topic was 0.17; with alpha fixed at 0.1 it is about 0.68.</p>
+<p>The lesson is general: <strong>a topic model that runs is not a topic model that works.</strong> Always check that the documents are not all identical mixtures (we do this below), and always read the topics.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Other options of <code><a href="https://rdrr.io/pkg/topicmodels/man/lda.html">LDA()</a></code>
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>
+<code>method</code>: how the model is fitted. The default, <code>"VEM"</code>, is fast. The alternative, <code>"Gibbs"</code>, is slower but is often preferred for careful results. Both estimate the same model, and both need a sensible alpha: with Gibbs, the default alpha is <code>50 / K</code>, which for K = 6 is about 8.3, and we found it too large here as well. Add <code>alpha = 0.1</code> there too.</li>
+<li>
+<code>alpha</code>: as above. Smaller values (0.01 to 0.5) give documents that lean toward fewer topics; larger values give blended documents. It is a judgment call, and worth trying a few values.</li>
+<li>
+<code>iter</code> and <code>burnin</code> (for <code>"Gibbs"</code>): how many rounds of computation to run, and how many early rounds to throw away. More rounds give more stable results and take longer.</li>
+</ul>
+</div>
+</div>
+</section><section id="the-topics-beta" class="level2" data-number="4.5"><h2 data-number="4.5" class="anchored" data-anchor-id="the-topics-beta">
+<span class="header-section-number">4.5</span> The topics: beta</h2>
+<p><code>tidy(lda, matrix = "beta")</code> turns the fitted model into a table with the probability of each word under each topic. The highest-probability words define the topic.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html">tidy</a></span><span class="op">(</span><span class="va">lda</span>, matrix <span class="op">=</span> <span class="st">"beta"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">top_terms</span> <span class="op">&lt;-</span> <span class="va">beta</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">group_by</span><span class="op">(</span><span class="va">topic</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">slice_max</span><span class="op">(</span><span class="va">beta</span>, n <span class="op">=</span> <span class="fl">10</span>, with_ties <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">ungroup</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">top_terms</span>, <span class="fu">aes</span><span class="op">(</span><span class="va">beta</span>, <span class="fu"><a href="https://juliasilge.github.io/tidytext/reference/reorder_within.html">reorder_within</a></span><span class="op">(</span><span class="va">term</span>, <span class="va">beta</span>, <span class="va">topic</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_col</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://juliasilge.github.io/tidytext/reference/reorder_within.html">scale_y_reordered</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">scale_x_continuous</span><span class="op">(</span>n.breaks <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span>   <span class="co"># fewer tick labels, so they do not collide in small panels</span></span>
+<span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span> <span class="va">topic</span>, scales <span class="op">=</span> <span class="st">"free_y"</span>, ncol <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Probability of word within topic"</span>, y <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-beta" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure"><div aria-describedby="fig-beta-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="04-topic-lda_files/figure-html/fig-beta-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-beta-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4.1: Top ten words in each topic.
+</figcaption></figure>
+</div>
+</div>
+</div>
+<ul>
+<li>
+<code><a href="https://generics.r-lib.org/reference/tidy.html">tidy()</a></code> is a general-purpose function that turns the output of a statistical model into a neat table. With <code>matrix = "beta"</code> it returns three columns: <code>topic</code>, <code>term</code> (the word), and <code>beta</code> (the probability of that word within that topic).</li>
+<li>The next step keeps the ten most probable words in each topic, the same <code>group_by()</code>, <code>slice_max()</code>, <code>ungroup()</code> recipe as before.</li>
+<li>The chart draws one panel per topic (<code>facet_wrap(~ topic, ...)</code>). The option <code>ncol = 3</code> arranges the panels in three columns. <code>scales = "free_y"</code> lets each panel list its own words.</li>
+</ul>
+<p><strong>This is the step that requires you.</strong> Read each panel and try to name it. Some will be crisp (“housing, rent, campus, apartments, expensive”). Others will be a grab-bag. A grab-bag topic is not a failure of reading; it is information that K or the preprocessing needs work.</p>
+<section id="reading-the-chart-from-our-run" class="level3" data-number="4.5.1"><h3 data-number="4.5.1" class="anchored" data-anchor-id="reading-the-chart-from-our-run">
+<span class="header-section-number">4.5.1</span> Reading the chart from our run</h3>
+<p>Each panel is one topic. The bars show how likely each word is <em>within that topic</em>, with the most probable word at the top. Here is how to read the six panels we got, and what each tells us.</p>
+<ul>
+<li>
+<strong>Topic 4 is the clearest, and it is about style, not subject.</strong> Its top words are “says,” “thinks,” “wants,” “mentioned,” “positive,” and “appreciates.” Those are the third-person phrases interviewers used when they wrote down what a student said instead of quoting them. The model has found a real pattern, but a pattern in <em>how the notes were written</em>, not in what students talked about.</li>
+<li>
+<strong>Generic words dominate several topics.</strong> “Campus” and “help” appear near the top of four of the six panels (topics 1, 2, 4, and 5). Topic 1 is the extreme case: “campus” is far ahead of every other word. Words that are common everywhere crowd the lists, which is the reason the chapter offers the distinctive-word list as a second view.</li>
+<li>
+<strong>Topics 3 and 6 are grab-bags.</strong> Their bars are nearly flat: no word leads, and the words (“first, schools, experience, better, learn, place” in topic 3; “say, communication, people, give, left, mine, friend” in topic 6) do not add up to a subject you could name. A flat panel like this tells you the model has not found a theme there.</li>
+<li>
+<strong>Topics 2 and 5 sit in between</strong>, with one or two leading words (“help,” “campus”) and a tail of generic ones.</li>
+</ul>
+<p>Notice also the horizontal scale. Even the most probable word in any topic accounts for only about 5% of that topic’s words. That is normal: a topic spreads its probability over many words, so individual bars are short.</p>
+<p>If you were reporting these results, you would name topic 4 (with a caveat about what it is), and say honestly that the others are not clean themes. That is a legitimate and useful finding about the data and the settings, not a failure.</p>
+</section><section id="words-that-are-common-everywhere-crowd-the-lists" class="level3" data-number="4.5.2"><h3 data-number="4.5.2" class="anchored" data-anchor-id="words-that-are-common-everywhere-crowd-the-lists">
+<span class="header-section-number">4.5.2</span> Words that are common everywhere crowd the lists</h3>
+<p>A word like “events” or “resources” can be high in several topics simply because it is frequent overall. A useful alternative is to rank words by how much <em>more</em> likely they are in one topic than average, which pulls out more distinctive words:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">distinct_terms</span> <span class="op">&lt;-</span> <span class="va">beta</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">group_by</span><span class="op">(</span><span class="va">term</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>avg_log_beta <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html">log</a></span><span class="op">(</span><span class="va">beta</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">ungroup</span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>lift <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html">log</a></span><span class="op">(</span><span class="va">beta</span><span class="op">)</span> <span class="op">-</span> <span class="va">avg_log_beta</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">group_by</span><span class="op">(</span><span class="va">topic</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">slice_max</span><span class="op">(</span><span class="va">lift</span>, n <span class="op">=</span> <span class="fl">8</span>, with_ties <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">summarise</span><span class="op">(</span>words <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="va">term</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">distinct_terms</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 2
+  topic words                                                                   
+  &lt;int&gt; &lt;chr&gt;                                                                   
+1     1 wifi, knowledge, desk, front, end, loan, term, laptop                   
+2     2 laptop, loan, clinic, textbook, inconsistent, next, paperwork, improved 
+3     3 laptop, loan, wifi, single, create, place, learn, looked                
+4     4 recommends, expanding, cheaper, speaks, lacking, proposes, change, chan…
+5     5 laptop, loan, wifi, lacking, safe, ride, clinic, required               
+6     6 textbook, inconsistent, next, emails, chances, advisors, tech, friend   </code></pre>
+</div>
+</div>
+<p>Reading it in stages:</p>
+<ol type="1">
+<li>
+<code>group_by(term)</code> then <code>mutate(avg_log_beta = mean(log(beta)))</code> computes, for each word, its <em>average</em> (log) probability across all the topics. This is the word’s “typical” level.</li>
+<li>
+<code>mutate(lift = log(beta) - avg_log_beta)</code> subtracts that average from the word’s value in each topic. The result, <code>lift</code>, is large when a word is much more likely in this topic than in a typical one. (Logarithms turn “how many times more likely” into a difference, which is easier to work with.)</li>
+<li>We then regroup by topic, keep the eight words with the highest lift, and paste them into one line per topic with <code>paste(term, collapse = ", ")</code>.</li>
+</ol>
+<p>Compare these lists with the plot. Distinctive words usually make a topic easier to name; frequent words usually make it easier to defend. Look at both.</p>
+<p>Be aware that this measure has a known weakness: it rewards <strong>rare words</strong>, because a word that is almost never used anywhere can have a very high ratio in the one topic that uses it. You can see that here. The same technology words (“laptop,” “loan,” “wifi”) appear in the lists for several different topics, which is a sign of a rare-word effect and not of four topics about technology. One topic stands out clearly, though: its words (“recommends,” “expanding,” “proposes,” “lacking”) belong to the third-person note-taking style of the paper forms rather than to a subject, much as in <a href="05-topic-stm.html" class="quarto-xref"><span>Chapter 5</span></a>. Treat the lift list as a second opinion, and trust a topic only when the probable words, the distinctive words, and the strongest documents all point the same way.</p>
+</section></section><section id="the-documents-gamma" class="level2" data-number="4.6"><h2 data-number="4.6" class="anchored" data-anchor-id="the-documents-gamma">
+<span class="header-section-number">4.6</span> The documents: gamma</h2>
+<p><code>matrix = "gamma"</code> gives each document’s mix of topics.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">gamma</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html">tidy</a></span><span class="op">(</span><span class="va">lda</span>, matrix <span class="op">=</span> <span class="st">"gamma"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>resp_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html">as.integer</a></span><span class="op">(</span><span class="va">document</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">gamma</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="va">resp_id</span> <span class="op">==</span> <span class="fu">first</span><span class="op">(</span><span class="va">resp_id</span><span class="op">)</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 4
+  document topic   gamma resp_id
+  &lt;chr&gt;    &lt;int&gt;   &lt;dbl&gt;   &lt;int&gt;
+1 1            1 0.953         1
+2 1            2 0.00944       1
+3 1            3 0.00944       1
+4 1            4 0.00944       1
+5 1            5 0.00944       1
+6 1            6 0.00944       1</code></pre>
+</div>
+</div>
+<p>The result has one row per document-topic pair: the <code>document</code> (the student’s ID, stored as text), the <code>topic</code>, and the <code>gamma</code>. <code>as.integer(document)</code> turns the ID back into a number so we can match it with our other tables. The second line shows the six rows for one student: their share of each topic.</p>
+<p>Each document’s gammas sum to 1. How much does a typical student’s document belong to a single topic?</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">dominant</span> <span class="op">&lt;-</span> <span class="va">gamma</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">group_by</span><span class="op">(</span><span class="va">resp_id</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">slice_max</span><span class="op">(</span><span class="va">gamma</span>, n <span class="op">=</span> <span class="fl">1</span>, with_ties <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">ungroup</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">ggplot</span><span class="op">(</span><span class="va">dominant</span>, <span class="fu">aes</span><span class="op">(</span><span class="va">gamma</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_histogram</span><span class="op">(</span>binwidth <span class="op">=</span> <span class="fl">0.05</span>, boundary <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Gamma of the strongest topic"</span>, y <span class="op">=</span> <span class="st">"Students"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-dominant" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure"><div aria-describedby="fig-dominant-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="04-topic-lda_files/figure-html/fig-dominant-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-dominant-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4.2: The share of each student’s document taken by its strongest topic.
+</figcaption></figure>
+</div>
+</div>
+</div>
+<p>For each student (<code>group_by(resp_id)</code>), <code>slice_max(gamma, n = 1)</code> keeps just their strongest topic. The histogram then shows how big that strongest share usually is.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">dominant</span><span class="op">$</span><span class="va">gamma</span><span class="op">)</span>   <span class="co"># average share of each student's strongest topic</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.6757406</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fl">1</span> <span class="op">/</span> <span class="va">K</span>                  <span class="co"># what a completely blended, "collapsed" model would give</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1666667</code></pre>
+</div>
+</div>
+<p>This is the check mentioned in the alpha note above. The first number is the average share of each student’s strongest topic. The second is what you would get if every student were an even blend of all topics, which is the signature of a failed model. Our average is far above <code>1 / K</code>, so the documents do lean toward particular topics. If your own average is close to <code>1 / K</code>, the model has not found structure; try a smaller alpha.</p>
+<p>If the bulk of the bars sits far below 1, documents are genuinely mixed. If it piles up near 1, documents are cleanly single-topic. With short documents you will usually see more mixing than you expect, and “the dominant topic” can be a weak claim.</p>
+<p><strong>What the histogram shows in our run.</strong> The horizontal axis is how much of a student’s text belongs to their strongest topic, and the bar height is how many students fall in that range. The shape has two parts:</p>
+<ul>
+<li>
+<strong>A broad hump in the middle.</strong> Most students peak between about 0.4 and 0.8, with the tallest bars near 0.5 to 0.6. For these students the strongest topic accounts for roughly half to two-thirds of their text, and the rest is spread over other topics. They are genuine blends.</li>
+<li>
+<strong>A tall spike at the far right.</strong> Roughly 240 students, close to a fifth of the total, are almost entirely one topic (above 0.95). A small dip just before it (around 0.85 to 0.9) separates them from the hump.</li>
+</ul>
+<p>Notice what is <em>missing</em>: nothing falls below about 0.25. With six topics, the lowest possible value is 1/6 (about 0.17), which is the “completely blended” floor we compared against above. So the model is clearly leaning documents toward topics.</p>
+<p>The spike is probably a document-length effect. A student with very few words can easily be explained by a single topic, while a longer document draws on several. If you plan to report “the dominant topic” for each student, remember that for the students in the middle hump it describes only about half their text.</p>
+</section><section id="prevalence-how-big-is-each-topic" class="level2" data-number="4.7"><h2 data-number="4.7" class="anchored" data-anchor-id="prevalence-how-big-is-each-topic">
+<span class="header-section-number">4.7</span> Prevalence: how big is each topic?</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">gamma</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">group_by</span><span class="op">(</span><span class="va">topic</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">summarise</span><span class="op">(</span>prevalence <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">gamma</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">ggplot</span><span class="op">(</span><span class="fu">aes</span><span class="op">(</span><span class="va">prevalence</span>, <span class="fu"><a href="https://rdrr.io/r/stats/reorder.factor.html">reorder</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span><span class="op">(</span><span class="va">topic</span><span class="op">)</span>, <span class="va">prevalence</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_col</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Mean gamma"</span>, y <span class="op">=</span> <span class="st">"Topic"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-prevalence" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure"><div aria-describedby="fig-prevalence-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="04-topic-lda_files/figure-html/fig-prevalence-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-prevalence-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4.3: Average share of each topic across students.
+</figcaption></figure>
+</div>
+</div>
+</div>
+<p><code>summarise(prevalence = mean(gamma))</code> averages gamma across all students, separately for each topic. The result is each topic’s overall <strong>prevalence</strong>: roughly, the share of all the text that belongs to it. <code>factor(topic)</code> tells the chart to treat the topic numbers as labels rather than as quantities.</p>
+<p><strong>What the chart shows in our run.</strong> The bars are sorted from the largest topic to the smallest. Topics 1 and 2 are the biggest, each covering about 20% of all the text. Topics 5, 3, and 6 follow at roughly 15 to 17%, and topic 4 is the smallest at about 12%. The topics are fairly even in size, with no single one dominating.</p>
+<p>Two cautions about reading prevalence. First, <strong>bigger does not mean more important.</strong> Topics 1 and 2 are the two whose top words were mostly generic (“campus,” “help,” “things”), so their size is partly because they absorb the common words that do not belong anywhere else. Large, generic topics are often catch-alls. Second, the smallest topic (4) is the one that is most clearly nameable (the note-taking style). A small topic can be the sharpest one.</p>
+</section><section id="always-read-the-documents" class="level2" data-number="4.8"><h2 data-number="4.8" class="anchored" data-anchor-id="always-read-the-documents">
+<span class="header-section-number">4.8</span> Always read the documents</h2>
+<p>The word lists are a summary of a summary. For each topic, read the documents where it is strongest.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">student_text</span> <span class="op">&lt;-</span> <span class="va">vcu</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">group_by</span><span class="op">(</span><span class="va">resp_id</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">summarise</span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="va">text</span>, collapse <span class="op">=</span> <span class="st">" | "</span><span class="op">)</span>, .groups <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">gamma</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="va">topic</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">slice_max</span><span class="op">(</span><span class="va">gamma</span>, n <span class="op">=</span> <span class="fl">3</span>, with_ties <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">left_join</span><span class="op">(</span><span class="va">student_text</span>, by <span class="op">=</span> <span class="st">"resp_id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">select</span><span class="op">(</span><span class="va">gamma</span>, <span class="va">text</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 2
+  gamma text                                                                    
+  &lt;dbl&gt; &lt;chr&gt;                                                                   
+1 0.989 Good small class sizes, the TRIO program kept me on track My advisor me…
+2 0.983 Really happy with the system, compared to other schools, the how things…
+3 0.981 Really happy with the people. Compared to other schools, the email syst…</code></pre>
+</div>
+</div>
+<ul>
+<li>The first part goes back to the original answers and glues each student’s answers into one string, separated by <code>" | "</code> (<code>paste(..., collapse = " | ")</code>). <code>.groups = "drop"</code> tells <code>summarise()</code> to ungroup afterward.</li>
+<li>The second part picks topic 1, keeps its three strongest students, and uses <code>left_join()</code> to attach each student’s text. A <strong>left join</strong> adds columns from a second table by matching on a shared column (<code>resp_id</code>), keeping every row of the first table.</li>
+</ul>
+<p>Change <code>topic == 1</code> to each topic in turn. If the top documents for a topic do not look related, the topic is not a theme, no matter how coherent its word list looks.</p>
+</section><section id="a-check-against-the-interviewers-codes" class="level2" data-number="4.9"><h2 data-number="4.9" class="anchored" data-anchor-id="a-check-against-the-interviewers-codes">
+<span class="header-section-number">4.9</span> A check against the interviewers’ codes</h2>
+<p>We have an independent signal: the topics the interviewers ticked. If LDA is finding real themes, a topic’s strongest documents should tend to carry related interviewer codes.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">codes</span> <span class="op">&lt;-</span> <span class="va">vcu</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html">is.na</a></span><span class="op">(</span><span class="va">topics</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">separate_rows</span><span class="op">(</span><span class="va">topics</span>, sep <span class="op">=</span> <span class="st">";\\s*"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">distinct</span><span class="op">(</span><span class="va">resp_id</span>, <span class="va">topics</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">base_rate</span> <span class="op">&lt;-</span> <span class="va">codes</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">count</span><span class="op">(</span><span class="va">topics</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>base <span class="op">=</span> <span class="va">n</span> <span class="op">/</span> <span class="fu">n_distinct</span><span class="op">(</span><span class="va">codes</span><span class="op">$</span><span class="va">resp_id</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">select</span><span class="op">(</span><span class="va">topics</span>, <span class="va">base</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Only students from the original form have interviewer codes, so compare</span></span>
+<span><span class="co"># like with like: the size of each topic is counted among coded students only</span></span>
+<span><span class="va">topic_sizes</span> <span class="op">&lt;-</span> <span class="va">dominant</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="va">resp_id</span> <span class="op"><a href="https://rdrr.io/r/base/match.html">%in%</a></span> <span class="va">codes</span><span class="op">$</span><span class="va">resp_id</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">count</span><span class="op">(</span><span class="va">topic</span>, name <span class="op">=</span> <span class="st">"n_students"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">dominant</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">inner_join</span><span class="op">(</span><span class="va">codes</span>, by <span class="op">=</span> <span class="st">"resp_id"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">count</span><span class="op">(</span><span class="va">topic</span>, <span class="va">topics</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">left_join</span><span class="op">(</span><span class="va">topic_sizes</span>, by <span class="op">=</span> <span class="st">"topic"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">left_join</span><span class="op">(</span><span class="va">base_rate</span>, by <span class="op">=</span> <span class="st">"topics"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>share <span class="op">=</span> <span class="va">n</span> <span class="op">/</span> <span class="va">n_students</span>, lift <span class="op">=</span> <span class="va">share</span> <span class="op">/</span> <span class="va">base</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="va">n</span> <span class="op">&gt;=</span> <span class="fl">5</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">group_by</span><span class="op">(</span><span class="va">topic</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">slice_max</span><span class="op">(</span><span class="va">lift</span>, n <span class="op">=</span> <span class="fl">3</span>, with_ties <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">ungroup</span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">ggplot</span><span class="op">(</span><span class="fu">aes</span><span class="op">(</span><span class="va">lift</span>, <span class="fu"><a href="https://juliasilge.github.io/tidytext/reference/reorder_within.html">reorder_within</a></span><span class="op">(</span><span class="va">topics</span>, <span class="va">lift</span>, <span class="va">topic</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_col</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">geom_vline</span><span class="op">(</span>xintercept <span class="op">=</span> <span class="fl">1</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://juliasilge.github.io/tidytext/reference/reorder_within.html">scale_y_reordered</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">scale_x_continuous</span><span class="op">(</span>breaks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">facet_wrap</span><span class="op">(</span><span class="op">~</span> <span class="va">topic</span>, scales <span class="op">=</span> <span class="st">"free_y"</span>, ncol <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">labs</span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Lift over the overall rate (1 = no association)"</span>, y <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-validate" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure"><div aria-describedby="fig-validate-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="04-topic-lda_files/figure-html/fig-validate-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-validate-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4.4: For each LDA topic, the interviewer codes most over-represented among its students.
+</figcaption></figure>
+</div>
+</div>
+</div>
+<p>This is the longest block so far, but it follows one idea: for each LDA topic, which interviewer codes show up <em>more than usual</em>?</p>
+<ol type="1">
+<li>
+<strong><code>codes</code></strong>: the interviewers’ codes are stored as one text string per answer (“Advising; Safety”). <code>separate_rows(topics, sep = ";\\s*")</code> splits that string so each code gets its own row, and <code>distinct(resp_id, topics)</code> keeps one row per student-code pair.</li>
+<li>
+<strong><code>base_rate</code></strong>: how common each code is overall, as a share of coded students.</li>
+<li>
+<strong><code>topic_sizes</code></strong>: how many coded students have each LDA topic as their strongest one.</li>
+<li>
+<strong>The main pipeline</strong>: <code>inner_join()</code> matches each student’s dominant topic with their codes (an <em>inner join</em> keeps only students who appear in both tables). Then <code>count(topic, topics)</code> counts students for each topic-code pair; <code>left_join()</code> attaches the topic sizes and base rates; and <code>mutate()</code> computes
+<ul>
+<li>
+<code>share</code>: the fraction of that LDA topic’s students who have the code, and</li>
+<li>
+<code>lift</code>: <code>share / base</code>, the ratio of that fraction to the overall rate.</li>
+</ul>
+</li>
+<li>
+<code>filter(n &gt;= 5)</code> ignores combinations seen fewer than five times, and <code>slice_max(lift, n = 3)</code> keeps the three codes with the highest lift per topic.</li>
+<li>The chart draws the lifts as bars. <code>geom_vline(xintercept = 1, linetype = "dashed")</code> adds a dashed line at 1, where a code is exactly as common as usual.</li>
+</ol>
+<p><strong>Lift</strong> is the key idea. A lift of 2 means the code is twice as common among this topic’s students as in the data overall. A lift of 1 means no relationship. A topic with no codes above 1, or with odd ones, is a candidate for being an artifact.</p>
+<section id="reading-the-chart-from-our-run-1" class="level3" data-number="4.9.1"><h3 data-number="4.9.1" class="anchored" data-anchor-id="reading-the-chart-from-our-run-1">
+<span class="header-section-number">4.9.1</span> Reading the chart from our run</h3>
+<p>Each panel is an LDA topic, and the three bars are the interviewer codes most over-represented among that topic’s students. The dashed line at 1 means “no association,” and a bar that reaches 2 means the code is twice as common as usual.</p>
+<p>What the chart tells us is sobering, and that is the point of the check:</p>
+<ul>
+<li>
+<strong>Every bar is above 1, but only modestly.</strong> Most lifts sit between about 1.2 and 1.8. The largest, in topic 4 (financial aid and health support), reach about 2. These are weak associations. If the topics were capturing the same themes the interviewers coded, we would expect some bars to reach well above 2.</li>
+<li>
+<strong>The largest lifts belong to rare codes.</strong> “Staff development” and “faculty development” (topics 1 and 2) are among the least-used codes, so only a handful of students carry them. With so few students, a ratio can swing a lot, and the minimum of five students per combination does not fully protect against that.</li>
+<li>
+<strong>The pairings do not tell a coherent story.</strong> Topic 4, for instance, is the note-taking-style topic, yet its strongest links are to financial aid and health support, which have nothing to do with its words. That is the signature of a topic that reflects <em>phrasing</em> more than <em>subject</em>.</li>
+</ul>
+<p>So the interviewers’ codes give us no reason to trust these six topics as themes. This is the validation step doing its job: it protects you from reporting a tidy-looking topic list that does not correspond to anything else you know about the data. (Remember that the text here is synthetic and built from templates. With real interview data, you would hope to see stronger links, and if you did not, this chart is where you would find out.)</p>
+</section></section><section id="how-many-topics" class="level2" data-number="4.10"><h2 data-number="4.10" class="anchored" data-anchor-id="how-many-topics">
+<span class="header-section-number">4.10</span> How many topics?</h2>
+<p>There is no right answer, only a trade-off. Fewer topics are broad and easy to read but blur distinct ideas together. More topics are specific but start to split a single theme into near-duplicates.</p>
+<p>Fit several values of K and compare them by reading, not just by statistics.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu">map</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span><span class="op">)</span>, \<span class="op">(</span><span class="va">k</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/pkg/topicmodels/man/lda.html">LDA</a></span><span class="op">(</span><span class="va">dtm</span>, k <span class="op">=</span> <span class="va">k</span>, control <span class="op">=</span> <span class="va">lda_control</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">map_dfr</span><span class="op">(</span><span class="va">fits</span>, \<span class="op">(</span><span class="va">m</span><span class="op">)</span> <span class="fu">tibble</span><span class="op">(</span>k <span class="op">=</span> <span class="va">m</span><span class="op">@</span><span class="va">k</span>, loglik <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/logLik.html">logLik</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 2
+      k   loglik
+  &lt;int&gt;    &lt;dbl&gt;
+1     4 -175428.
+2     6 -174813.
+3     8 -173804.
+4    10 -173238.</code></pre>
+</div>
+</div>
+<p>This block introduces a way of repeating a step without copying and pasting.</p>
+<ul>
+<li>
+<code>map(c(4, 6, 8, 10), \(k) LDA(...))</code> takes the list of values and runs the function on each one. The odd-looking <code>\(k) ...</code> is a tiny function written on the spot (“given <code>k</code>, fit an LDA with that many topics”). The result, <code>fits</code>, is a list of four fitted models.</li>
+<li>
+<code>map_dfr(fits, \(m) tibble(...))</code> then goes through those models and, for each, builds a one-row table. <code>m@k</code> reads the number of topics stored inside the model (the <code>@</code> is how R reaches inside this kind of object), and <code>logLik(m)</code> is its <strong>log-likelihood</strong>, a score of how well the model fits the data. <code>map_dfr</code> stacks the four rows into one table.</li>
+</ul>
+<p>Log-likelihood is a fit score (higher, meaning closer to zero here, is better), but it does not pick K for you. A model with more topics can fit the data it was trained on at least as well, so the score tends to keep improving as K grows, and that is what you see: it rises from about −175,400 at four topics to about −173,200 at ten, with no sharp bend that would point to a particular K. It says nothing about whether the extra topics are <em>meaningful</em>. Formal helpers exist: held-out <strong>perplexity</strong> (<code><a href="https://rdrr.io/pkg/topicmodels/man/perplexity.html">topicmodels::perplexity()</a></code>, which scores the model on documents it did not train on) and coherence measures (the <code>ldatuning</code> package). They narrow the range, but the last step is always a judgment: does this set of topics tell a story I can defend, and that I can verify by reading?</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>A practical routine
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ol type="1">
+<li>Fit K = 4, 6, 8, 10.</li>
+<li>For each, print the top words and name every topic.</li>
+<li>Prefer the smallest K where every topic gets a name you would stand behind and no two topics are near-duplicates.</li>
+<li>Read top documents for each topic.</li>
+</ol>
+</div>
+</div>
+</section><section id="cautions" class="level2" data-number="4.11"><h2 data-number="4.11" class="anchored" data-anchor-id="cautions">
+<span class="header-section-number">4.11</span> Cautions</h2>
+<ul>
+<li>
+<strong>LDA is stochastic.</strong> “Stochastic” means it involves randomness. Change the seed and the topics reshuffle. Stable themes appear across seeds. Unstable ones are probably noise.</li>
+<li>
+<strong>Topics are not categories.</strong> A document’s strongest topic is a summary, not a classification.</li>
+<li>
+<strong>Short text is hard.</strong> We combined answers per student to get enough words. Even so, expect messier topics here than with long documents.</li>
+<li>
+<strong>Preprocessing choices matter.</strong> Different stop-word lists and vocabulary cutoffs will change the topics. Document yours.</li>
+</ul>
+<p>In the next chapter, we use a model that lets topic prevalence vary with student characteristics, so that “which topics do graduate students bring up more?” becomes a question the model can answer directly.</p>
+</section><section id="summary" class="level2" data-number="4.12"><h2 data-number="4.12" class="anchored" data-anchor-id="summary">
+<span class="header-section-number">4.12</span> Summary</h2>
+<ul>
+<li>LDA finds <strong>topics</strong> (lists of words that go together) and describes each document as a <strong>mix</strong> of them.</li>
+<li>
+<strong>Beta</strong> answers “what is this topic about?”; <strong>gamma</strong> answers “what is this document about?”</li>
+<li>You choose <strong>K</strong>, and you name the topics yourself. Both are judgment calls.</li>
+<li>Make documents long enough to show co-occurrence, and prune very rare words.</li>
+<li>Always validate: read the top documents, and compare with any labels you already have.</li>
+</ul>
+
+
+<!-- -->
+
+</section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const cellDetails = window.document.querySelectorAll(".cell details.code-fold");
+        for (let i=0; i<cellDetails.length; i++) {
+          const details = cellDetails[i];
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell div.sourceCode.cell-code");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script><nav class="page-navigation"><div class="nav-page nav-page-previous">
+      <a href="./03-tf-idf.html" class="pagination-link" aria-label="Term Frequency and TF-IDF">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Term Frequency and TF-IDF</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./05-topic-stm.html" class="pagination-link" aria-label="Topic Models II: Structural Topic Models">
+        <span class="nav-page-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Topic Models II: Structural Topic Models</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb24" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># Topic Models I: LDA {#sec-lda}</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>**Data for this chapter:** <span class="in">`data/vcu_cares_long.csv`</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>TF-IDF told us which words are distinctive of a group we had already defined, such as "undergraduates." A **topic model** goes the other way. It proposes the groups. Given only the words in each document, it finds sets of words that tend to appear together and calls each set a **topic**.</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>The most widely used topic model is **Latent Dirichlet Allocation**, or **LDA** (Blei, Ng, &amp; Jordan, 2003). The name is intimidating, but the idea is not, as the next section shows.</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>By the end of this chapter you will be able to explain what LDA assumes, fit a model, read its two main outputs (called *beta* and *gamma*), and check whether the topics it found are real.</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: setup</span></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"R/helpers.R"</span>)</span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidytext)</span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(topicmodels)</span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>vcu <span class="ot">&lt;-</span> <span class="fu">load_vcu</span>()</span>
+<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a><span class="in">`topicmodels`</span> is the package that fits the LDA model. <span class="in">`tidytext`</span> (loaded as before) provides helpers that turn the model's output into tables we can work with.</span>
+<span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a><span class="fu">## The idea in plain terms</span></span>
+<span id="cb24-26"><a href="#cb24-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a>Imagine you could look inside a pile of answers and see that some are about housing (rent, dorms, repairs), some about money (aid, tuition, costs), and some about advising (advisors, appointments, registration). Nobody labeled them; you just notice that certain words keep turning up together. A topic model does this noticing automatically.</span>
+<span id="cb24-28"><a href="#cb24-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-29"><a href="#cb24-29" aria-hidden="true" tabindex="-1"></a>LDA works by imagining a simple story about how every document was written:</span>
+<span id="cb24-30"><a href="#cb24-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-31"><a href="#cb24-31" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Each document has its own **mix of topics**, such as 60% topic A and 40% topic B.</span>
+<span id="cb24-32"><a href="#cb24-32" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Each topic is a **list of words with probabilities**. Topic A might make "housing," "rent," and "dorm" likely, and "advisor" unlikely.</span>
+<span id="cb24-33"><a href="#cb24-33" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>To write each word of a document, pick a topic according to the document's mix, then pick a word from that topic's list.</span>
+<span id="cb24-34"><a href="#cb24-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-35"><a href="#cb24-35" aria-hidden="true" tabindex="-1"></a>Of course, nobody really writes this way. But the story is a useful fiction, because it can be run **backward**. We observe only the words. LDA searches for the topic word-lists and the document mixes that would most plausibly have produced the words we see.</span>
+<span id="cb24-36"><a href="#cb24-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-37"><a href="#cb24-37" aria-hidden="true" tabindex="-1"></a>The two things it gives back have Greek-letter nicknames that you will see in all the software:</span>
+<span id="cb24-38"><a href="#cb24-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-39"><a href="#cb24-39" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Name <span class="pp">|</span> What it is <span class="pp">|</span> Question it answers <span class="pp">|</span></span>
+<span id="cb24-40"><a href="#cb24-40" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb24-41"><a href="#cb24-41" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **beta** (β) <span class="pp">|</span> For each topic, how likely each word is <span class="pp">|</span> "What is this topic about?" <span class="pp">|</span></span>
+<span id="cb24-42"><a href="#cb24-42" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **gamma** (γ) <span class="pp">|</span> For each document, how much of it belongs to each topic <span class="pp">|</span> "What is this document about?" <span class="pp">|</span></span>
+<span id="cb24-43"><a href="#cb24-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-44"><a href="#cb24-44" aria-hidden="true" tabindex="-1"></a>Three things to keep in mind from the start:</span>
+<span id="cb24-45"><a href="#cb24-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-46"><a href="#cb24-46" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>A **topic is a list of words, not a label.** The model does not know that topic 3 is "housing." You read the top words and name it yourself.</span>
+<span id="cb24-47"><a href="#cb24-47" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**You choose the number of topics, K.** The data do not tell you the right K.</span>
+<span id="cb24-48"><a href="#cb24-48" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Documents mix topics.** An answer can be partly about advising and partly about money.</span>
+<span id="cb24-49"><a href="#cb24-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-50"><a href="#cb24-50" aria-hidden="true" tabindex="-1"></a><span class="fu">## Choosing the documents</span></span>
+<span id="cb24-51"><a href="#cb24-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-52"><a href="#cb24-52" aria-hidden="true" tabindex="-1"></a>LDA learns from words that appear *together within a document*. Our answers have a median of about a dozen words, and after stop-word removal, six or seven. That is too little for patterns of togetherness to show up.</span>
+<span id="cb24-53"><a href="#cb24-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-54"><a href="#cb24-54" aria-hidden="true" tabindex="-1"></a>The fix is to make the document bigger. We combine each student's answers (strength, concern, and ideas) into one document. Each student's document then has a few dozen words, enough to reveal which words travel together.</span>
+<span id="cb24-55"><a href="#cb24-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-58"><a href="#cb24-58" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-59"><a href="#cb24-59" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: docs</span></span>
+<span id="cb24-60"><a href="#cb24-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-61"><a href="#cb24-61" aria-hidden="true" tabindex="-1"></a>stops <span class="ot">&lt;-</span> stop_words <span class="sc">|&gt;</span> <span class="fu">filter</span>(lexicon <span class="sc">==</span> <span class="st">"snowball"</span>)</span>
+<span id="cb24-62"><a href="#cb24-62" aria-hidden="true" tabindex="-1"></a>custom_stops <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">word =</span> <span class="fu">c</span>(<span class="st">"vcu"</span>, <span class="st">"student"</span>, <span class="st">"students"</span>, <span class="st">"like"</span>,</span>
+<span id="cb24-63"><a href="#cb24-63" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"get"</span>, <span class="st">"just"</span>, <span class="st">"really"</span>, <span class="st">"also"</span>, <span class="st">"can"</span>,</span>
+<span id="cb24-64"><a href="#cb24-64" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"e"</span>, <span class="st">"g"</span>, <span class="st">"lot"</span>))</span>
+<span id="cb24-65"><a href="#cb24-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-66"><a href="#cb24-66" aria-hidden="true" tabindex="-1"></a>tokens <span class="ot">&lt;-</span> vcu <span class="sc">|&gt;</span></span>
+<span id="cb24-67"><a href="#cb24-67" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest_tokens</span>(word, text) <span class="sc">|&gt;</span></span>
+<span id="cb24-68"><a href="#cb24-68" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anti_join</span>(stops, <span class="at">by =</span> <span class="st">"word"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-69"><a href="#cb24-69" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anti_join</span>(custom_stops, <span class="at">by =</span> <span class="st">"word"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-70"><a href="#cb24-70" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">str_detect</span>(word, <span class="st">"^</span><span class="sc">\\</span><span class="st">d+$"</span>))</span>
+<span id="cb24-71"><a href="#cb24-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-72"><a href="#cb24-72" aria-hidden="true" tabindex="-1"></a><span class="co"># Keep words used in at least 5 different students' answers</span></span>
+<span id="cb24-73"><a href="#cb24-73" aria-hidden="true" tabindex="-1"></a>vocab <span class="ot">&lt;-</span> tokens <span class="sc">|&gt;</span></span>
+<span id="cb24-74"><a href="#cb24-74" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(resp_id, word) <span class="sc">|&gt;</span></span>
+<span id="cb24-75"><a href="#cb24-75" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(word) <span class="sc">|&gt;</span></span>
+<span id="cb24-76"><a href="#cb24-76" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(n <span class="sc">&gt;=</span> <span class="dv">5</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-77"><a href="#cb24-77" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(word)</span>
+<span id="cb24-78"><a href="#cb24-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-79"><a href="#cb24-79" aria-hidden="true" tabindex="-1"></a>student_counts <span class="ot">&lt;-</span> tokens <span class="sc">|&gt;</span></span>
+<span id="cb24-80"><a href="#cb24-80" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(word <span class="sc">%in%</span> vocab) <span class="sc">|&gt;</span></span>
+<span id="cb24-81"><a href="#cb24-81" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(resp_id, word)</span>
+<span id="cb24-82"><a href="#cb24-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-83"><a href="#cb24-83" aria-hidden="true" tabindex="-1"></a><span class="co"># Drop students left with too few words to say anything</span></span>
+<span id="cb24-84"><a href="#cb24-84" aria-hidden="true" tabindex="-1"></a>keep <span class="ot">&lt;-</span> student_counts <span class="sc">|&gt;</span></span>
+<span id="cb24-85"><a href="#cb24-85" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(resp_id) <span class="sc">|&gt;</span></span>
+<span id="cb24-86"><a href="#cb24-86" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">sum</span>(n) <span class="sc">&gt;=</span> <span class="dv">5</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-87"><a href="#cb24-87" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb24-88"><a href="#cb24-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-89"><a href="#cb24-89" aria-hidden="true" tabindex="-1"></a><span class="fu">n_distinct</span>(keep<span class="sc">$</span>resp_id); <span class="fu">n_distinct</span>(keep<span class="sc">$</span>word)</span>
+<span id="cb24-90"><a href="#cb24-90" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-91"><a href="#cb24-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-92"><a href="#cb24-92" aria-hidden="true" tabindex="-1"></a>This block does four jobs.</span>
+<span id="cb24-93"><a href="#cb24-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-94"><a href="#cb24-94" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Tokenize and clean** (the first <span class="in">`tokens &lt;-`</span> step). It is the same as in the last two chapters: split into words, remove stop words and bare numbers. (We added "e," "g," and "lot" to the domain stop words because they were noise.)</span>
+<span id="cb24-95"><a href="#cb24-95" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**Build a vocabulary** (<span class="in">`vocab`</span>). <span class="in">`distinct(resp_id, word)`</span> keeps one row per student-word pair, so a word used five times by one student still counts once. <span class="in">`count(word)`</span> then counts how many *different students* used each word, and <span class="in">`filter(n &gt;= 5)`</span> keeps words used by at least five students. <span class="in">`pull(word)`</span> turns the result into a plain list of words. This pruning is standard: a word used by only one or two students cannot help define a topic, and it slows the model down.</span>
+<span id="cb24-96"><a href="#cb24-96" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**Count words per student** (<span class="in">`student_counts`</span>). <span class="in">`filter(word %in% vocab)`</span> keeps only the vocabulary words, and <span class="in">`count(resp_id, word)`</span> counts each word within each student. This is our "documents" table: one row per student-word pair, with a count.</span>
+<span id="cb24-97"><a href="#cb24-97" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>**Drop thin documents** (<span class="in">`keep`</span>). <span class="in">`group_by(resp_id)`</span> followed by <span class="in">`filter(sum(n) &gt;= 5)`</span> keeps only students with at least five total words left. Inside a grouped <span class="in">`filter()`</span>, <span class="in">`sum(n)`</span> is calculated within each student, not across the whole table.</span>
+<span id="cb24-98"><a href="#cb24-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-99"><a href="#cb24-99" aria-hidden="true" tabindex="-1"></a>The last line reports how many students (documents) and how many distinct words (the vocabulary) remain. <span class="in">`n_distinct()`</span> counts unique values.</span>
+<span id="cb24-100"><a href="#cb24-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-101"><a href="#cb24-101" aria-hidden="true" tabindex="-1"></a><span class="fu">## Build the document-term matrix</span></span>
+<span id="cb24-102"><a href="#cb24-102" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-103"><a href="#cb24-103" aria-hidden="true" tabindex="-1"></a>LDA wants a **document-term matrix**: a grid with one row per document, one column per word, and the count of that word in that document in each cell. It is mostly zeros, because each student uses only a small part of the vocabulary. Such a grid is called *sparse*, and the software stores it compactly.</span>
+<span id="cb24-104"><a href="#cb24-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-107"><a href="#cb24-107" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-108"><a href="#cb24-108" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: dtm</span></span>
+<span id="cb24-109"><a href="#cb24-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-110"><a href="#cb24-110" aria-hidden="true" tabindex="-1"></a>dtm <span class="ot">&lt;-</span> keep <span class="sc">|&gt;</span> <span class="fu">cast_dtm</span>(<span class="at">document =</span> resp_id, <span class="at">term =</span> word, <span class="at">value =</span> n)</span>
+<span id="cb24-111"><a href="#cb24-111" aria-hidden="true" tabindex="-1"></a>dtm</span>
+<span id="cb24-112"><a href="#cb24-112" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-113"><a href="#cb24-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-114"><a href="#cb24-114" aria-hidden="true" tabindex="-1"></a><span class="in">`cast_dtm()`</span> converts our long table into that grid. Its three options say which column holds the document (<span class="in">`resp_id`</span>), the term (<span class="in">`word`</span>), and the value to put in the cells (<span class="in">`n`</span>, the count). Printing <span class="in">`dtm`</span> shows its size and how sparse it is: here, about 1,200 students (rows) by about 400 words (columns), and a "sparsity" of about 94%, which means 94% of the cells are zero.</span>
+<span id="cb24-115"><a href="#cb24-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-116"><a href="#cb24-116" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fit the model</span></span>
+<span id="cb24-117"><a href="#cb24-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-120"><a href="#cb24-120" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-121"><a href="#cb24-121" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fit</span></span>
+<span id="cb24-122"><a href="#cb24-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-123"><a href="#cb24-123" aria-hidden="true" tabindex="-1"></a>K <span class="ot">&lt;-</span> <span class="dv">6</span></span>
+<span id="cb24-124"><a href="#cb24-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-125"><a href="#cb24-125" aria-hidden="true" tabindex="-1"></a><span class="co"># alpha controls how mixed each document is. We fix it at a small value so that</span></span>
+<span id="cb24-126"><a href="#cb24-126" aria-hidden="true" tabindex="-1"></a><span class="co"># documents lean toward a few topics (see the note below for why this matters).</span></span>
+<span id="cb24-127"><a href="#cb24-127" aria-hidden="true" tabindex="-1"></a>lda_control <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">seed =</span> <span class="dv">664</span>, <span class="at">alpha =</span> <span class="fl">0.1</span>, <span class="at">estimate.alpha =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb24-128"><a href="#cb24-128" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-129"><a href="#cb24-129" aria-hidden="true" tabindex="-1"></a>lda <span class="ot">&lt;-</span> <span class="fu">LDA</span>(dtm, <span class="at">k =</span> K, <span class="at">control =</span> lda_control)</span>
+<span id="cb24-130"><a href="#cb24-130" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-131"><a href="#cb24-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-132"><a href="#cb24-132" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`K &lt;- 6`</span> saves the number of topics under a name, so that we can change it in one place.</span>
+<span id="cb24-133"><a href="#cb24-133" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`lda_control &lt;- list(...)`</span> bundles the model's settings in one place, so that we can reuse them later. <span class="in">`seed = 664`</span> fixes the random starting point (see @sec-r-primer): LDA starts from a random guess and can land in different places on different runs, so fixing the seed makes your results reproducible. <span class="in">`alpha`</span> and <span class="in">`estimate.alpha`</span> are explained next.</span>
+<span id="cb24-134"><a href="#cb24-134" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`LDA()`</span> fits the model. The first argument is the matrix; <span class="in">`k`</span> is the number of topics; and <span class="in">`control`</span> passes the settings.</span>
+<span id="cb24-135"><a href="#cb24-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-136"><a href="#cb24-136" aria-hidden="true" tabindex="-1"></a>::: callout-warning</span>
+<span id="cb24-137"><a href="#cb24-137" aria-hidden="true" tabindex="-1"></a><span class="fu">## Why we set `alpha` by hand: a model that quietly fails</span></span>
+<span id="cb24-138"><a href="#cb24-138" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-139"><a href="#cb24-139" aria-hidden="true" tabindex="-1"></a>**Alpha** controls how *mixed* each document is. A small alpha says "documents lean toward a few topics." A large alpha says "documents are an even blend of every topic."</span>
+<span id="cb24-140"><a href="#cb24-140" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-141"><a href="#cb24-141" aria-hidden="true" tabindex="-1"></a>By default, <span class="in">`LDA()`</span> *estimates* alpha from the data. On our short documents, that estimate ran away: when we tried it, the software chose an alpha of about 55. That is so large that every student came out as an almost perfectly even blend of all six topics (each topic about 17%, which is 1/6), and the six topic word lists were nearly interchangeable ("campus," "help," "support," "experience"). The model ran without any error or warning. It simply learned nothing.</span>
+<span id="cb24-142"><a href="#cb24-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-143"><a href="#cb24-143" aria-hidden="true" tabindex="-1"></a>Fixing alpha at 0.1 (<span class="in">`alpha = 0.1, estimate.alpha = FALSE`</span>) tells the model to expect documents that lean toward a few topics, and the topics then separate. You can see the change directly: with the default, the average share of each student's strongest topic was 0.17; with alpha fixed at 0.1 it is about 0.68.</span>
+<span id="cb24-144"><a href="#cb24-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-145"><a href="#cb24-145" aria-hidden="true" tabindex="-1"></a>The lesson is general: **a topic model that runs is not a topic model that works.** Always check that the documents are not all identical mixtures (we do this below), and always read the topics.</span>
+<span id="cb24-146"><a href="#cb24-146" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb24-147"><a href="#cb24-147" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-148"><a href="#cb24-148" aria-hidden="true" tabindex="-1"></a>::: callout-note</span>
+<span id="cb24-149"><a href="#cb24-149" aria-hidden="true" tabindex="-1"></a><span class="fu">## Other options of `LDA()`</span></span>
+<span id="cb24-150"><a href="#cb24-150" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-151"><a href="#cb24-151" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`method`</span>: how the model is fitted. The default, <span class="in">`"VEM"`</span>, is fast. The alternative, <span class="in">`"Gibbs"`</span>, is slower but is often preferred for careful results. Both estimate the same model, and both need a sensible alpha: with Gibbs, the default alpha is <span class="in">`50 / K`</span>, which for K = 6 is about 8.3, and we found it too large here as well. Add <span class="in">`alpha = 0.1`</span> there too.</span>
+<span id="cb24-152"><a href="#cb24-152" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`alpha`</span>: as above. Smaller values (0.01 to 0.5) give documents that lean toward fewer topics; larger values give blended documents. It is a judgment call, and worth trying a few values.</span>
+<span id="cb24-153"><a href="#cb24-153" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`iter`</span> and <span class="in">`burnin`</span> (for <span class="in">`"Gibbs"`</span>): how many rounds of computation to run, and how many early rounds to throw away. More rounds give more stable results and take longer.</span>
+<span id="cb24-154"><a href="#cb24-154" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb24-155"><a href="#cb24-155" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-156"><a href="#cb24-156" aria-hidden="true" tabindex="-1"></a><span class="fu">## The topics: beta</span></span>
+<span id="cb24-157"><a href="#cb24-157" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-158"><a href="#cb24-158" aria-hidden="true" tabindex="-1"></a><span class="in">`tidy(lda, matrix = "beta")`</span> turns the fitted model into a table with the probability of each word under each topic. The highest-probability words define the topic.</span>
+<span id="cb24-159"><a href="#cb24-159" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-162"><a href="#cb24-162" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-163"><a href="#cb24-163" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-beta</span></span>
+<span id="cb24-164"><a href="#cb24-164" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "Top ten words in each topic."</span></span>
+<span id="cb24-165"><a href="#cb24-165" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 7</span></span>
+<span id="cb24-166"><a href="#cb24-166" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-167"><a href="#cb24-167" aria-hidden="true" tabindex="-1"></a>beta <span class="ot">&lt;-</span> <span class="fu">tidy</span>(lda, <span class="at">matrix =</span> <span class="st">"beta"</span>)</span>
+<span id="cb24-168"><a href="#cb24-168" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-169"><a href="#cb24-169" aria-hidden="true" tabindex="-1"></a>top_terms <span class="ot">&lt;-</span> beta <span class="sc">|&gt;</span></span>
+<span id="cb24-170"><a href="#cb24-170" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(topic) <span class="sc">|&gt;</span></span>
+<span id="cb24-171"><a href="#cb24-171" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(beta, <span class="at">n =</span> <span class="dv">10</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-172"><a href="#cb24-172" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb24-173"><a href="#cb24-173" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-174"><a href="#cb24-174" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(top_terms, <span class="fu">aes</span>(beta, <span class="fu">reorder_within</span>(term, beta, topic))) <span class="sc">+</span></span>
+<span id="cb24-175"><a href="#cb24-175" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span></span>
+<span id="cb24-176"><a href="#cb24-176" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_reordered</span>() <span class="sc">+</span></span>
+<span id="cb24-177"><a href="#cb24-177" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">n.breaks =</span> <span class="dv">3</span>) <span class="sc">+</span>   <span class="co"># fewer tick labels, so they do not collide in small panels</span></span>
+<span id="cb24-178"><a href="#cb24-178" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> topic, <span class="at">scales =</span> <span class="st">"free_y"</span>, <span class="at">ncol =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb24-179"><a href="#cb24-179" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Probability of word within topic"</span>, <span class="at">y =</span> <span class="cn">NULL</span>)</span>
+<span id="cb24-180"><a href="#cb24-180" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-181"><a href="#cb24-181" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-182"><a href="#cb24-182" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`tidy()`</span> is a general-purpose function that turns the output of a statistical model into a neat table. With <span class="in">`matrix = "beta"`</span> it returns three columns: <span class="in">`topic`</span>, <span class="in">`term`</span> (the word), and <span class="in">`beta`</span> (the probability of that word within that topic).</span>
+<span id="cb24-183"><a href="#cb24-183" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The next step keeps the ten most probable words in each topic, the same <span class="in">`group_by()`</span>, <span class="in">`slice_max()`</span>, <span class="in">`ungroup()`</span> recipe as before.</span>
+<span id="cb24-184"><a href="#cb24-184" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The chart draws one panel per topic (<span class="in">`facet_wrap(~ topic, ...)`</span>). The option <span class="in">`ncol = 3`</span> arranges the panels in three columns. <span class="in">`scales = "free_y"`</span> lets each panel list its own words.</span>
+<span id="cb24-185"><a href="#cb24-185" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-186"><a href="#cb24-186" aria-hidden="true" tabindex="-1"></a>**This is the step that requires you.** Read each panel and try to name it. Some will be crisp ("housing, rent, campus, apartments, expensive"). Others will be a grab-bag. A grab-bag topic is not a failure of reading; it is information that K or the preprocessing needs work.</span>
+<span id="cb24-187"><a href="#cb24-187" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-188"><a href="#cb24-188" aria-hidden="true" tabindex="-1"></a><span class="fu">### Reading the chart from our run</span></span>
+<span id="cb24-189"><a href="#cb24-189" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-190"><a href="#cb24-190" aria-hidden="true" tabindex="-1"></a>Each panel is one topic. The bars show how likely each word is *within that topic*, with the most probable word at the top. Here is how to read the six panels we got, and what each tells us.</span>
+<span id="cb24-191"><a href="#cb24-191" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-192"><a href="#cb24-192" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Topic 4 is the clearest, and it is about style, not subject.** Its top words are "says," "thinks," "wants," "mentioned," "positive," and "appreciates." Those are the third-person phrases interviewers used when they wrote down what a student said instead of quoting them. The model has found a real pattern, but a pattern in *how the notes were written*, not in what students talked about.</span>
+<span id="cb24-193"><a href="#cb24-193" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Generic words dominate several topics.** "Campus" and "help" appear near the top of four of the six panels (topics 1, 2, 4, and 5). Topic 1 is the extreme case: "campus" is far ahead of every other word. Words that are common everywhere crowd the lists, which is the reason the chapter offers the distinctive-word list as a second view.</span>
+<span id="cb24-194"><a href="#cb24-194" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Topics 3 and 6 are grab-bags.** Their bars are nearly flat: no word leads, and the words ("first, schools, experience, better, learn, place" in topic 3; "say, communication, people, give, left, mine, friend" in topic 6) do not add up to a subject you could name. A flat panel like this tells you the model has not found a theme there.</span>
+<span id="cb24-195"><a href="#cb24-195" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Topics 2 and 5 sit in between**, with one or two leading words ("help," "campus") and a tail of generic ones.</span>
+<span id="cb24-196"><a href="#cb24-196" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-197"><a href="#cb24-197" aria-hidden="true" tabindex="-1"></a>Notice also the horizontal scale. Even the most probable word in any topic accounts for only about 5% of that topic's words. That is normal: a topic spreads its probability over many words, so individual bars are short.</span>
+<span id="cb24-198"><a href="#cb24-198" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-199"><a href="#cb24-199" aria-hidden="true" tabindex="-1"></a>If you were reporting these results, you would name topic 4 (with a caveat about what it is), and say honestly that the others are not clean themes. That is a legitimate and useful finding about the data and the settings, not a failure.</span>
+<span id="cb24-200"><a href="#cb24-200" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-201"><a href="#cb24-201" aria-hidden="true" tabindex="-1"></a><span class="fu">### Words that are common everywhere crowd the lists</span></span>
+<span id="cb24-202"><a href="#cb24-202" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-203"><a href="#cb24-203" aria-hidden="true" tabindex="-1"></a>A word like "events" or "resources" can be high in several topics simply because it is frequent overall. A useful alternative is to rank words by how much *more* likely they are in one topic than average, which pulls out more distinctive words:</span>
+<span id="cb24-204"><a href="#cb24-204" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-207"><a href="#cb24-207" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-208"><a href="#cb24-208" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: distinctive</span></span>
+<span id="cb24-209"><a href="#cb24-209" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-210"><a href="#cb24-210" aria-hidden="true" tabindex="-1"></a>distinct_terms <span class="ot">&lt;-</span> beta <span class="sc">|&gt;</span></span>
+<span id="cb24-211"><a href="#cb24-211" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(term) <span class="sc">|&gt;</span></span>
+<span id="cb24-212"><a href="#cb24-212" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">avg_log_beta =</span> <span class="fu">mean</span>(<span class="fu">log</span>(beta))) <span class="sc">|&gt;</span></span>
+<span id="cb24-213"><a href="#cb24-213" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
+<span id="cb24-214"><a href="#cb24-214" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">lift =</span> <span class="fu">log</span>(beta) <span class="sc">-</span> avg_log_beta) <span class="sc">|&gt;</span></span>
+<span id="cb24-215"><a href="#cb24-215" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(topic) <span class="sc">|&gt;</span></span>
+<span id="cb24-216"><a href="#cb24-216" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(lift, <span class="at">n =</span> <span class="dv">8</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-217"><a href="#cb24-217" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">words =</span> <span class="fu">paste</span>(term, <span class="at">collapse =</span> <span class="st">", "</span>))</span>
+<span id="cb24-218"><a href="#cb24-218" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-219"><a href="#cb24-219" aria-hidden="true" tabindex="-1"></a>distinct_terms</span>
+<span id="cb24-220"><a href="#cb24-220" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-221"><a href="#cb24-221" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-222"><a href="#cb24-222" aria-hidden="true" tabindex="-1"></a>Reading it in stages:</span>
+<span id="cb24-223"><a href="#cb24-223" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-224"><a href="#cb24-224" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span><span class="in">`group_by(term)`</span> then <span class="in">`mutate(avg_log_beta = mean(log(beta)))`</span> computes, for each word, its *average* (log) probability across all the topics. This is the word's "typical" level.</span>
+<span id="cb24-225"><a href="#cb24-225" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span><span class="in">`mutate(lift = log(beta) - avg_log_beta)`</span> subtracts that average from the word's value in each topic. The result, <span class="in">`lift`</span>, is large when a word is much more likely in this topic than in a typical one. (Logarithms turn "how many times more likely" into a difference, which is easier to work with.)</span>
+<span id="cb24-226"><a href="#cb24-226" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>We then regroup by topic, keep the eight words with the highest lift, and paste them into one line per topic with <span class="in">`paste(term, collapse = ", ")`</span>.</span>
+<span id="cb24-227"><a href="#cb24-227" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-228"><a href="#cb24-228" aria-hidden="true" tabindex="-1"></a>Compare these lists with the plot. Distinctive words usually make a topic easier to name; frequent words usually make it easier to defend. Look at both.</span>
+<span id="cb24-229"><a href="#cb24-229" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-230"><a href="#cb24-230" aria-hidden="true" tabindex="-1"></a>Be aware that this measure has a known weakness: it rewards **rare words**, because a word that is almost never used anywhere can have a very high ratio in the one topic that uses it. You can see that here. The same technology words ("laptop," "loan," "wifi") appear in the lists for several different topics, which is a sign of a rare-word effect and not of four topics about technology. One topic stands out clearly, though: its words ("recommends," "expanding," "proposes," "lacking") belong to the third-person note-taking style of the paper forms rather than to a subject, much as in @sec-stm. Treat the lift list as a second opinion, and trust a topic only when the probable words, the distinctive words, and the strongest documents all point the same way.</span>
+<span id="cb24-231"><a href="#cb24-231" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-232"><a href="#cb24-232" aria-hidden="true" tabindex="-1"></a><span class="fu">## The documents: gamma</span></span>
+<span id="cb24-233"><a href="#cb24-233" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-234"><a href="#cb24-234" aria-hidden="true" tabindex="-1"></a><span class="in">`matrix = "gamma"`</span> gives each document's mix of topics.</span>
+<span id="cb24-235"><a href="#cb24-235" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-238"><a href="#cb24-238" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-239"><a href="#cb24-239" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: gamma</span></span>
+<span id="cb24-240"><a href="#cb24-240" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-241"><a href="#cb24-241" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">&lt;-</span> <span class="fu">tidy</span>(lda, <span class="at">matrix =</span> <span class="st">"gamma"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-242"><a href="#cb24-242" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">resp_id =</span> <span class="fu">as.integer</span>(document))</span>
+<span id="cb24-243"><a href="#cb24-243" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-244"><a href="#cb24-244" aria-hidden="true" tabindex="-1"></a>gamma <span class="sc">|&gt;</span> <span class="fu">filter</span>(resp_id <span class="sc">==</span> <span class="fu">first</span>(resp_id))</span>
+<span id="cb24-245"><a href="#cb24-245" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-246"><a href="#cb24-246" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-247"><a href="#cb24-247" aria-hidden="true" tabindex="-1"></a>The result has one row per document-topic pair: the <span class="in">`document`</span> (the student's ID, stored as text), the <span class="in">`topic`</span>, and the <span class="in">`gamma`</span>. <span class="in">`as.integer(document)`</span> turns the ID back into a number so we can match it with our other tables. The second line shows the six rows for one student: their share of each topic.</span>
+<span id="cb24-248"><a href="#cb24-248" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-249"><a href="#cb24-249" aria-hidden="true" tabindex="-1"></a>Each document's gammas sum to 1. How much does a typical student's document belong to a single topic?</span>
+<span id="cb24-250"><a href="#cb24-250" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-253"><a href="#cb24-253" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-254"><a href="#cb24-254" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-dominant</span></span>
+<span id="cb24-255"><a href="#cb24-255" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "The share of each student's document taken by its strongest topic."</span></span>
+<span id="cb24-256"><a href="#cb24-256" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-257"><a href="#cb24-257" aria-hidden="true" tabindex="-1"></a>dominant <span class="ot">&lt;-</span> gamma <span class="sc">|&gt;</span></span>
+<span id="cb24-258"><a href="#cb24-258" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(resp_id) <span class="sc">|&gt;</span></span>
+<span id="cb24-259"><a href="#cb24-259" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(gamma, <span class="at">n =</span> <span class="dv">1</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-260"><a href="#cb24-260" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb24-261"><a href="#cb24-261" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-262"><a href="#cb24-262" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(dominant, <span class="fu">aes</span>(gamma)) <span class="sc">+</span></span>
+<span id="cb24-263"><a href="#cb24-263" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.05</span>, <span class="at">boundary =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb24-264"><a href="#cb24-264" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Gamma of the strongest topic"</span>, <span class="at">y =</span> <span class="st">"Students"</span>)</span>
+<span id="cb24-265"><a href="#cb24-265" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-266"><a href="#cb24-266" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-267"><a href="#cb24-267" aria-hidden="true" tabindex="-1"></a>For each student (<span class="in">`group_by(resp_id)`</span>), <span class="in">`slice_max(gamma, n = 1)`</span> keeps just their strongest topic. The histogram then shows how big that strongest share usually is.</span>
+<span id="cb24-268"><a href="#cb24-268" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-271"><a href="#cb24-271" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-272"><a href="#cb24-272" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: collapse-check</span></span>
+<span id="cb24-273"><a href="#cb24-273" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-274"><a href="#cb24-274" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(dominant<span class="sc">$</span>gamma)   <span class="co"># average share of each student's strongest topic</span></span>
+<span id="cb24-275"><a href="#cb24-275" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> <span class="sc">/</span> K                  <span class="co"># what a completely blended, "collapsed" model would give</span></span>
+<span id="cb24-276"><a href="#cb24-276" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-277"><a href="#cb24-277" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-278"><a href="#cb24-278" aria-hidden="true" tabindex="-1"></a>This is the check mentioned in the alpha note above. The first number is the average share of each student's strongest topic. The second is what you would get if every student were an even blend of all topics, which is the signature of a failed model. Our average is far above <span class="in">`1 / K`</span>, so the documents do lean toward particular topics. If your own average is close to <span class="in">`1 / K`</span>, the model has not found structure; try a smaller alpha.</span>
+<span id="cb24-279"><a href="#cb24-279" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-280"><a href="#cb24-280" aria-hidden="true" tabindex="-1"></a>If the bulk of the bars sits far below 1, documents are genuinely mixed. If it piles up near 1, documents are cleanly single-topic. With short documents you will usually see more mixing than you expect, and "the dominant topic" can be a weak claim.</span>
+<span id="cb24-281"><a href="#cb24-281" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-282"><a href="#cb24-282" aria-hidden="true" tabindex="-1"></a>**What the histogram shows in our run.** The horizontal axis is how much of a student's text belongs to their strongest topic, and the bar height is how many students fall in that range. The shape has two parts:</span>
+<span id="cb24-283"><a href="#cb24-283" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-284"><a href="#cb24-284" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**A broad hump in the middle.** Most students peak between about 0.4 and 0.8, with the tallest bars near 0.5 to 0.6. For these students the strongest topic accounts for roughly half to two-thirds of their text, and the rest is spread over other topics. They are genuine blends.</span>
+<span id="cb24-285"><a href="#cb24-285" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**A tall spike at the far right.** Roughly 240 students, close to a fifth of the total, are almost entirely one topic (above 0.95). A small dip just before it (around 0.85 to 0.9) separates them from the hump.</span>
+<span id="cb24-286"><a href="#cb24-286" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-287"><a href="#cb24-287" aria-hidden="true" tabindex="-1"></a>Notice what is *missing*: nothing falls below about 0.25. With six topics, the lowest possible value is 1/6 (about 0.17), which is the "completely blended" floor we compared against above. So the model is clearly leaning documents toward topics.</span>
+<span id="cb24-288"><a href="#cb24-288" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-289"><a href="#cb24-289" aria-hidden="true" tabindex="-1"></a>The spike is probably a document-length effect. A student with very few words can easily be explained by a single topic, while a longer document draws on several. If you plan to report "the dominant topic" for each student, remember that for the students in the middle hump it describes only about half their text.</span>
+<span id="cb24-290"><a href="#cb24-290" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-291"><a href="#cb24-291" aria-hidden="true" tabindex="-1"></a><span class="fu">## Prevalence: how big is each topic?</span></span>
+<span id="cb24-292"><a href="#cb24-292" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-295"><a href="#cb24-295" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-296"><a href="#cb24-296" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-prevalence</span></span>
+<span id="cb24-297"><a href="#cb24-297" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "Average share of each topic across students."</span></span>
+<span id="cb24-298"><a href="#cb24-298" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-299"><a href="#cb24-299" aria-hidden="true" tabindex="-1"></a>gamma <span class="sc">|&gt;</span></span>
+<span id="cb24-300"><a href="#cb24-300" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(topic) <span class="sc">|&gt;</span></span>
+<span id="cb24-301"><a href="#cb24-301" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">prevalence =</span> <span class="fu">mean</span>(gamma)) <span class="sc">|&gt;</span></span>
+<span id="cb24-302"><a href="#cb24-302" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(prevalence, <span class="fu">reorder</span>(<span class="fu">factor</span>(topic), prevalence))) <span class="sc">+</span></span>
+<span id="cb24-303"><a href="#cb24-303" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span></span>
+<span id="cb24-304"><a href="#cb24-304" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Mean gamma"</span>, <span class="at">y =</span> <span class="st">"Topic"</span>)</span>
+<span id="cb24-305"><a href="#cb24-305" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-306"><a href="#cb24-306" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-307"><a href="#cb24-307" aria-hidden="true" tabindex="-1"></a><span class="in">`summarise(prevalence = mean(gamma))`</span> averages gamma across all students, separately for each topic. The result is each topic's overall **prevalence**: roughly, the share of all the text that belongs to it. <span class="in">`factor(topic)`</span> tells the chart to treat the topic numbers as labels rather than as quantities.</span>
+<span id="cb24-308"><a href="#cb24-308" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-309"><a href="#cb24-309" aria-hidden="true" tabindex="-1"></a>**What the chart shows in our run.** The bars are sorted from the largest topic to the smallest. Topics 1 and 2 are the biggest, each covering about 20% of all the text. Topics 5, 3, and 6 follow at roughly 15 to 17%, and topic 4 is the smallest at about 12%. The topics are fairly even in size, with no single one dominating.</span>
+<span id="cb24-310"><a href="#cb24-310" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-311"><a href="#cb24-311" aria-hidden="true" tabindex="-1"></a>Two cautions about reading prevalence. First, **bigger does not mean more important.** Topics 1 and 2 are the two whose top words were mostly generic ("campus," "help," "things"), so their size is partly because they absorb the common words that do not belong anywhere else. Large, generic topics are often catch-alls. Second, the smallest topic (4) is the one that is most clearly nameable (the note-taking style). A small topic can be the sharpest one.</span>
+<span id="cb24-312"><a href="#cb24-312" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-313"><a href="#cb24-313" aria-hidden="true" tabindex="-1"></a><span class="fu">## Always read the documents</span></span>
+<span id="cb24-314"><a href="#cb24-314" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-315"><a href="#cb24-315" aria-hidden="true" tabindex="-1"></a>The word lists are a summary of a summary. For each topic, read the documents where it is strongest.</span>
+<span id="cb24-316"><a href="#cb24-316" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-319"><a href="#cb24-319" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-320"><a href="#cb24-320" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: read-docs</span></span>
+<span id="cb24-321"><a href="#cb24-321" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-322"><a href="#cb24-322" aria-hidden="true" tabindex="-1"></a>student_text <span class="ot">&lt;-</span> vcu <span class="sc">|&gt;</span></span>
+<span id="cb24-323"><a href="#cb24-323" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(resp_id) <span class="sc">|&gt;</span></span>
+<span id="cb24-324"><a href="#cb24-324" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">text =</span> <span class="fu">paste</span>(text, <span class="at">collapse =</span> <span class="st">" | "</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb24-325"><a href="#cb24-325" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-326"><a href="#cb24-326" aria-hidden="true" tabindex="-1"></a>gamma <span class="sc">|&gt;</span></span>
+<span id="cb24-327"><a href="#cb24-327" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(topic <span class="sc">==</span> <span class="dv">1</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-328"><a href="#cb24-328" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(gamma, <span class="at">n =</span> <span class="dv">3</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-329"><a href="#cb24-329" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(student_text, <span class="at">by =</span> <span class="st">"resp_id"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-330"><a href="#cb24-330" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(gamma, text)</span>
+<span id="cb24-331"><a href="#cb24-331" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-332"><a href="#cb24-332" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-333"><a href="#cb24-333" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The first part goes back to the original answers and glues each student's answers into one string, separated by <span class="in">`" | "`</span> (<span class="in">`paste(..., collapse = " | ")`</span>). <span class="in">`.groups = "drop"`</span> tells <span class="in">`summarise()`</span> to ungroup afterward.</span>
+<span id="cb24-334"><a href="#cb24-334" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The second part picks topic 1, keeps its three strongest students, and uses <span class="in">`left_join()`</span> to attach each student's text. A **left join** adds columns from a second table by matching on a shared column (<span class="in">`resp_id`</span>), keeping every row of the first table.</span>
+<span id="cb24-335"><a href="#cb24-335" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-336"><a href="#cb24-336" aria-hidden="true" tabindex="-1"></a>Change <span class="in">`topic == 1`</span> to each topic in turn. If the top documents for a topic do not look related, the topic is not a theme, no matter how coherent its word list looks.</span>
+<span id="cb24-337"><a href="#cb24-337" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-338"><a href="#cb24-338" aria-hidden="true" tabindex="-1"></a><span class="fu">## A check against the interviewers' codes</span></span>
+<span id="cb24-339"><a href="#cb24-339" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-340"><a href="#cb24-340" aria-hidden="true" tabindex="-1"></a>We have an independent signal: the topics the interviewers ticked. If LDA is finding real themes, a topic's strongest documents should tend to carry related interviewer codes.</span>
+<span id="cb24-341"><a href="#cb24-341" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-344"><a href="#cb24-344" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-345"><a href="#cb24-345" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-validate</span></span>
+<span id="cb24-346"><a href="#cb24-346" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "For each LDA topic, the interviewer codes most over-represented among its students."</span></span>
+<span id="cb24-347"><a href="#cb24-347" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 7</span></span>
+<span id="cb24-348"><a href="#cb24-348" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-349"><a href="#cb24-349" aria-hidden="true" tabindex="-1"></a>codes <span class="ot">&lt;-</span> vcu <span class="sc">|&gt;</span></span>
+<span id="cb24-350"><a href="#cb24-350" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(topics)) <span class="sc">|&gt;</span></span>
+<span id="cb24-351"><a href="#cb24-351" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_rows</span>(topics, <span class="at">sep =</span> <span class="st">";</span><span class="sc">\\</span><span class="st">s*"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-352"><a href="#cb24-352" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(resp_id, topics)</span>
+<span id="cb24-353"><a href="#cb24-353" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-354"><a href="#cb24-354" aria-hidden="true" tabindex="-1"></a>base_rate <span class="ot">&lt;-</span> codes <span class="sc">|&gt;</span></span>
+<span id="cb24-355"><a href="#cb24-355" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(topics) <span class="sc">|&gt;</span></span>
+<span id="cb24-356"><a href="#cb24-356" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">base =</span> n <span class="sc">/</span> <span class="fu">n_distinct</span>(codes<span class="sc">$</span>resp_id)) <span class="sc">|&gt;</span></span>
+<span id="cb24-357"><a href="#cb24-357" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(topics, base)</span>
+<span id="cb24-358"><a href="#cb24-358" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-359"><a href="#cb24-359" aria-hidden="true" tabindex="-1"></a><span class="co"># Only students from the original form have interviewer codes, so compare</span></span>
+<span id="cb24-360"><a href="#cb24-360" aria-hidden="true" tabindex="-1"></a><span class="co"># like with like: the size of each topic is counted among coded students only</span></span>
+<span id="cb24-361"><a href="#cb24-361" aria-hidden="true" tabindex="-1"></a>topic_sizes <span class="ot">&lt;-</span> dominant <span class="sc">|&gt;</span></span>
+<span id="cb24-362"><a href="#cb24-362" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(resp_id <span class="sc">%in%</span> codes<span class="sc">$</span>resp_id) <span class="sc">|&gt;</span></span>
+<span id="cb24-363"><a href="#cb24-363" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(topic, <span class="at">name =</span> <span class="st">"n_students"</span>)</span>
+<span id="cb24-364"><a href="#cb24-364" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-365"><a href="#cb24-365" aria-hidden="true" tabindex="-1"></a>dominant <span class="sc">|&gt;</span></span>
+<span id="cb24-366"><a href="#cb24-366" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(codes, <span class="at">by =</span> <span class="st">"resp_id"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-367"><a href="#cb24-367" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(topic, topics) <span class="sc">|&gt;</span></span>
+<span id="cb24-368"><a href="#cb24-368" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(topic_sizes, <span class="at">by =</span> <span class="st">"topic"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-369"><a href="#cb24-369" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(base_rate, <span class="at">by =</span> <span class="st">"topics"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-370"><a href="#cb24-370" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">share =</span> n <span class="sc">/</span> n_students, <span class="at">lift =</span> share <span class="sc">/</span> base) <span class="sc">|&gt;</span></span>
+<span id="cb24-371"><a href="#cb24-371" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(n <span class="sc">&gt;=</span> <span class="dv">5</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-372"><a href="#cb24-372" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(topic) <span class="sc">|&gt;</span></span>
+<span id="cb24-373"><a href="#cb24-373" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(lift, <span class="at">n =</span> <span class="dv">3</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-374"><a href="#cb24-374" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
+<span id="cb24-375"><a href="#cb24-375" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(lift, <span class="fu">reorder_within</span>(topics, lift, topic))) <span class="sc">+</span></span>
+<span id="cb24-376"><a href="#cb24-376" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span></span>
+<span id="cb24-377"><a href="#cb24-377" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">1</span>, <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span></span>
+<span id="cb24-378"><a href="#cb24-378" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_reordered</span>() <span class="sc">+</span></span>
+<span id="cb24-379"><a href="#cb24-379" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>)) <span class="sc">+</span></span>
+<span id="cb24-380"><a href="#cb24-380" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> topic, <span class="at">scales =</span> <span class="st">"free_y"</span>, <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb24-381"><a href="#cb24-381" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Lift over the overall rate (1 = no association)"</span>, <span class="at">y =</span> <span class="cn">NULL</span>)</span>
+<span id="cb24-382"><a href="#cb24-382" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-383"><a href="#cb24-383" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-384"><a href="#cb24-384" aria-hidden="true" tabindex="-1"></a>This is the longest block so far, but it follows one idea: for each LDA topic, which interviewer codes show up *more than usual*?</span>
+<span id="cb24-385"><a href="#cb24-385" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-386"><a href="#cb24-386" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**`codes`**: the interviewers' codes are stored as one text string per answer ("Advising; Safety"). <span class="in">`separate_rows(topics, sep = ";\\s*")`</span> splits that string so each code gets its own row, and <span class="in">`distinct(resp_id, topics)`</span> keeps one row per student-code pair.</span>
+<span id="cb24-387"><a href="#cb24-387" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**`base_rate`**: how common each code is overall, as a share of coded students.</span>
+<span id="cb24-388"><a href="#cb24-388" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**`topic_sizes`**: how many coded students have each LDA topic as their strongest one.</span>
+<span id="cb24-389"><a href="#cb24-389" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>**The main pipeline**: <span class="in">`inner_join()`</span> matches each student's dominant topic with their codes (an *inner join* keeps only students who appear in both tables). Then <span class="in">`count(topic, topics)`</span> counts students for each topic-code pair; <span class="in">`left_join()`</span> attaches the topic sizes and base rates; and <span class="in">`mutate()`</span> computes</span>
+<span id="cb24-390"><a href="#cb24-390" aria-hidden="true" tabindex="-1"></a><span class="ss">   - </span><span class="in">`share`</span>: the fraction of that LDA topic's students who have the code, and</span>
+<span id="cb24-391"><a href="#cb24-391" aria-hidden="true" tabindex="-1"></a><span class="ss">   - </span><span class="in">`lift`</span>: <span class="in">`share / base`</span>, the ratio of that fraction to the overall rate.</span>
+<span id="cb24-392"><a href="#cb24-392" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span><span class="in">`filter(n &gt;= 5)`</span> ignores combinations seen fewer than five times, and <span class="in">`slice_max(lift, n = 3)`</span> keeps the three codes with the highest lift per topic.</span>
+<span id="cb24-393"><a href="#cb24-393" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>The chart draws the lifts as bars. <span class="in">`geom_vline(xintercept = 1, linetype = "dashed")`</span> adds a dashed line at 1, where a code is exactly as common as usual.</span>
+<span id="cb24-394"><a href="#cb24-394" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-395"><a href="#cb24-395" aria-hidden="true" tabindex="-1"></a>**Lift** is the key idea. A lift of 2 means the code is twice as common among this topic's students as in the data overall. A lift of 1 means no relationship. A topic with no codes above 1, or with odd ones, is a candidate for being an artifact.</span>
+<span id="cb24-396"><a href="#cb24-396" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-397"><a href="#cb24-397" aria-hidden="true" tabindex="-1"></a><span class="fu">### Reading the chart from our run</span></span>
+<span id="cb24-398"><a href="#cb24-398" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-399"><a href="#cb24-399" aria-hidden="true" tabindex="-1"></a>Each panel is an LDA topic, and the three bars are the interviewer codes most over-represented among that topic's students. The dashed line at 1 means "no association," and a bar that reaches 2 means the code is twice as common as usual.</span>
+<span id="cb24-400"><a href="#cb24-400" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-401"><a href="#cb24-401" aria-hidden="true" tabindex="-1"></a>What the chart tells us is sobering, and that is the point of the check:</span>
+<span id="cb24-402"><a href="#cb24-402" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-403"><a href="#cb24-403" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Every bar is above 1, but only modestly.** Most lifts sit between about 1.2 and 1.8. The largest, in topic 4 (financial aid and health support), reach about 2. These are weak associations. If the topics were capturing the same themes the interviewers coded, we would expect some bars to reach well above 2.</span>
+<span id="cb24-404"><a href="#cb24-404" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**The largest lifts belong to rare codes.** "Staff development" and "faculty development" (topics 1 and 2) are among the least-used codes, so only a handful of students carry them. With so few students, a ratio can swing a lot, and the minimum of five students per combination does not fully protect against that.</span>
+<span id="cb24-405"><a href="#cb24-405" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**The pairings do not tell a coherent story.** Topic 4, for instance, is the note-taking-style topic, yet its strongest links are to financial aid and health support, which have nothing to do with its words. That is the signature of a topic that reflects *phrasing* more than *subject*.</span>
+<span id="cb24-406"><a href="#cb24-406" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-407"><a href="#cb24-407" aria-hidden="true" tabindex="-1"></a>So the interviewers' codes give us no reason to trust these six topics as themes. This is the validation step doing its job: it protects you from reporting a tidy-looking topic list that does not correspond to anything else you know about the data. (Remember that the text here is synthetic and built from templates. With real interview data, you would hope to see stronger links, and if you did not, this chart is where you would find out.)</span>
+<span id="cb24-408"><a href="#cb24-408" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-409"><a href="#cb24-409" aria-hidden="true" tabindex="-1"></a><span class="fu">## How many topics?</span></span>
+<span id="cb24-410"><a href="#cb24-410" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-411"><a href="#cb24-411" aria-hidden="true" tabindex="-1"></a>There is no right answer, only a trade-off. Fewer topics are broad and easy to read but blur distinct ideas together. More topics are specific but start to split a single theme into near-duplicates.</span>
+<span id="cb24-412"><a href="#cb24-412" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-413"><a href="#cb24-413" aria-hidden="true" tabindex="-1"></a>Fit several values of K and compare them by reading, not just by statistics.</span>
+<span id="cb24-414"><a href="#cb24-414" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-417"><a href="#cb24-417" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb24-418"><a href="#cb24-418" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: multiple-k</span></span>
+<span id="cb24-419"><a href="#cb24-419" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-420"><a href="#cb24-420" aria-hidden="true" tabindex="-1"></a>fits <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">8</span>, <span class="dv">10</span>), \(k) <span class="fu">LDA</span>(dtm, <span class="at">k =</span> k, <span class="at">control =</span> lda_control))</span>
+<span id="cb24-421"><a href="#cb24-421" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-422"><a href="#cb24-422" aria-hidden="true" tabindex="-1"></a><span class="fu">map_dfr</span>(fits, \(m) <span class="fu">tibble</span>(<span class="at">k =</span> m<span class="sc">@</span>k, <span class="at">loglik =</span> <span class="fu">as.numeric</span>(<span class="fu">logLik</span>(m))))</span>
+<span id="cb24-423"><a href="#cb24-423" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb24-424"><a href="#cb24-424" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-425"><a href="#cb24-425" aria-hidden="true" tabindex="-1"></a>This block introduces a way of repeating a step without copying and pasting.</span>
+<span id="cb24-426"><a href="#cb24-426" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-427"><a href="#cb24-427" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`map(c(4, 6, 8, 10), \(k) LDA(...))`</span> takes the list of values and runs the function on each one. The odd-looking <span class="in">`\(k) ...`</span> is a tiny function written on the spot ("given <span class="in">`k`</span>, fit an LDA with that many topics"). The result, <span class="in">`fits`</span>, is a list of four fitted models.</span>
+<span id="cb24-428"><a href="#cb24-428" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`map_dfr(fits, \(m) tibble(...))`</span> then goes through those models and, for each, builds a one-row table. <span class="in">`m@k`</span> reads the number of topics stored inside the model (the <span class="in">`@`</span> is how R reaches inside this kind of object), and <span class="in">`logLik(m)`</span> is its **log-likelihood**, a score of how well the model fits the data. <span class="in">`map_dfr`</span> stacks the four rows into one table.</span>
+<span id="cb24-429"><a href="#cb24-429" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-430"><a href="#cb24-430" aria-hidden="true" tabindex="-1"></a>Log-likelihood is a fit score (higher, meaning closer to zero here, is better), but it does not pick K for you. A model with more topics can fit the data it was trained on at least as well, so the score tends to keep improving as K grows, and that is what you see: it rises from about −175,400 at four topics to about −173,200 at ten, with no sharp bend that would point to a particular K. It says nothing about whether the extra topics are *meaningful*. Formal helpers exist: held-out **perplexity** (<span class="in">`topicmodels::perplexity()`</span>, which scores the model on documents it did not train on) and coherence measures (the <span class="in">`ldatuning`</span> package). They narrow the range, but the last step is always a judgment: does this set of topics tell a story I can defend, and that I can verify by reading?</span>
+<span id="cb24-431"><a href="#cb24-431" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-432"><a href="#cb24-432" aria-hidden="true" tabindex="-1"></a>::: callout-tip</span>
+<span id="cb24-433"><a href="#cb24-433" aria-hidden="true" tabindex="-1"></a><span class="fu">## A practical routine</span></span>
+<span id="cb24-434"><a href="#cb24-434" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-435"><a href="#cb24-435" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Fit K = 4, 6, 8, 10.</span>
+<span id="cb24-436"><a href="#cb24-436" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>For each, print the top words and name every topic.</span>
+<span id="cb24-437"><a href="#cb24-437" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>Prefer the smallest K where every topic gets a name you would stand behind and no two topics are near-duplicates.</span>
+<span id="cb24-438"><a href="#cb24-438" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>Read top documents for each topic.</span>
+<span id="cb24-439"><a href="#cb24-439" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb24-440"><a href="#cb24-440" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-441"><a href="#cb24-441" aria-hidden="true" tabindex="-1"></a><span class="fu">## Cautions</span></span>
+<span id="cb24-442"><a href="#cb24-442" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-443"><a href="#cb24-443" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**LDA is stochastic.** "Stochastic" means it involves randomness. Change the seed and the topics reshuffle. Stable themes appear across seeds. Unstable ones are probably noise.</span>
+<span id="cb24-444"><a href="#cb24-444" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Topics are not categories.** A document's strongest topic is a summary, not a classification.</span>
+<span id="cb24-445"><a href="#cb24-445" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Short text is hard.** We combined answers per student to get enough words. Even so, expect messier topics here than with long documents.</span>
+<span id="cb24-446"><a href="#cb24-446" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Preprocessing choices matter.** Different stop-word lists and vocabulary cutoffs will change the topics. Document yours.</span>
+<span id="cb24-447"><a href="#cb24-447" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-448"><a href="#cb24-448" aria-hidden="true" tabindex="-1"></a>In the next chapter, we use a model that lets topic prevalence vary with student characteristics, so that "which topics do graduate students bring up more?" becomes a question the model can answer directly.</span>
+<span id="cb24-449"><a href="#cb24-449" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-450"><a href="#cb24-450" aria-hidden="true" tabindex="-1"></a><span class="fu">## Summary</span></span>
+<span id="cb24-451"><a href="#cb24-451" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-452"><a href="#cb24-452" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>LDA finds **topics** (lists of words that go together) and describes each document as a **mix** of them.</span>
+<span id="cb24-453"><a href="#cb24-453" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Beta** answers "what is this topic about?"; **gamma** answers "what is this document about?"</span>
+<span id="cb24-454"><a href="#cb24-454" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>You choose **K**, and you name the topics yourself. Both are judgment calls.</span>
+<span id="cb24-455"><a href="#cb24-455" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Make documents long enough to show co-occurrence, and prune very rare words.</span>
+<span id="cb24-456"><a href="#cb24-456" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Always validate: read the top documents, and compare with any labels you already have.</span>
+</code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+<footer class="footer"><div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Text Mining in R</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/mikediam123/text-mining/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+<p>Built with <a href="https://quarto.org">Quarto</a></p>
+</div>
+  </div>
+</footer>
+
+
+</body></html>

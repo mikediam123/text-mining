@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="description" content="A hands-on introduction to text mining for lab members, built around open-ended interviews with VCU students. Moves from descriptive methods (word counts, TF-IDF) to topic models, sentiment analysis, and supervised learning.">
+<title>5&nbsp; Topic Models II: Structural Topic Models – Text Mining in R</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./06-sentiment.html" rel="next">
+<link href="./04-topic-lda.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-a09481bce8a2314b82ccc09e3e79ae8c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+</head>
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top"><nav class="quarto-secondary-nav"><div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./04-topic-lda.html">Finding Structure</a></li><li class="breadcrumb-item"><a href="./05-topic-stm.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Topic Models II: Structural Topic Models</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav></header><!-- content --><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto"><div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Text Mining in R</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/mikediam123/text-mining" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Welcome</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Getting Started</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./01-the-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">The Data</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./02-tokens.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Tokens</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Descriptive Methods</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./03-tf-idf.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Term Frequency and TF-IDF</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Finding Structure</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./04-topic-lda.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Topic Models I: LDA</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./05-topic-stm.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Topic Models II: Structural Topic Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./06-sentiment.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Sentiment Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Supervised Learning</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./07-supervised.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Supervised Learning: Predicting Topic Codes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./08-embeddings.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Embeddings: Using a Pretrained Language Model</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./09-wrapping-up.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Wrapping Up</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">
+<li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./appendix-r-primer.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Reading R Code: A Short Guide</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./appendix-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Glossary</span></span></a>
+  </div>
+</li>
+      </ul>
+</li>
+    </ul>
+</div>
+</nav><div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active"><h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+<li><a href="#what-stm-adds" id="toc-what-stm-adds" class="nav-link active" data-scroll-target="#what-stm-adds"><span class="header-section-number">5.1</span> What STM adds</a></li>
+  <li><a href="#documents-and-covariates" id="toc-documents-and-covariates" class="nav-link" data-scroll-target="#documents-and-covariates"><span class="header-section-number">5.2</span> Documents and covariates</a></li>
+  <li><a href="#preprocess-with-textprocessor" id="toc-preprocess-with-textprocessor" class="nav-link" data-scroll-target="#preprocess-with-textprocessor"><span class="header-section-number">5.3</span> Preprocess with <code>textProcessor()</code></a></li>
+  <li><a href="#fit-the-model" id="toc-fit-the-model" class="nav-link" data-scroll-target="#fit-the-model"><span class="header-section-number">5.4</span> Fit the model</a></li>
+  <li><a href="#reading-the-topics" id="toc-reading-the-topics" class="nav-link" data-scroll-target="#reading-the-topics"><span class="header-section-number">5.5</span> Reading the topics</a></li>
+  <li><a href="#how-big-is-each-topic" id="toc-how-big-is-each-topic" class="nav-link" data-scroll-target="#how-big-is-each-topic"><span class="header-section-number">5.6</span> How big is each topic?</a></li>
+  <li>
+<a href="#the-payoff-topics-by-student-level" id="toc-the-payoff-topics-by-student-level" class="nav-link" data-scroll-target="#the-payoff-topics-by-student-level"><span class="header-section-number">5.7</span> The payoff: topics by student level</a>
+  <ul class="collapse">
+<li><a href="#reading-the-chart-from-our-run" id="toc-reading-the-chart-from-our-run" class="nav-link" data-scroll-target="#reading-the-chart-from-our-run"><span class="header-section-number">5.7.1</span> Reading the chart from our run</a></li>
+  </ul>
+</li>
+  <li><a href="#choosing-k-with-searchk" id="toc-choosing-k-with-searchk" class="nav-link" data-scroll-target="#choosing-k-with-searchk"><span class="header-section-number">5.8</span> Choosing K with <code>searchK()</code></a></li>
+  <li><a href="#cautions" id="toc-cautions" class="nav-link" data-scroll-target="#cautions"><span class="header-section-number">5.9</span> Cautions</a></li>
+  <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary"><span class="header-section-number">5.10</span> Summary</a></li>
+  </ul><div class="toc-actions"><ul><li><a href="https://github.com/mikediam123/text-mining/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./04-topic-lda.html">Finding Structure</a></li><li class="breadcrumb-item"><a href="./05-topic-stm.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Topic Models II: Structural Topic Models</span></a></li></ol></nav><div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title"><span id="sec-stm" class="quarto-section-identifier"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Topic Models II: Structural Topic Models</span></span></h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header><p><strong>Data for this chapter:</strong> <code>data/vcu_cares_long.csv</code></p>
+<p>LDA gave us themes, but it treats every student the same. It cannot tell us whether graduate students raise different themes than undergraduates, except by a second step after the fact: take each document’s topics and compare them across groups by hand.</p>
+<p>The <strong>structural topic model (STM)</strong> (Roberts, Stewart, &amp; Tingley, 2019) builds that comparison into the model. You tell it about document-level characteristics, such as student level, and it lets the <em>prevalence</em> of each topic (how much of the text belongs to it) depend on them. The result is a topic model that can answer “which topics are more common among graduate students, and how sure are we?”</p>
+<p>By the end of this chapter you will be able to prepare documents for STM, fit a model, read its word lists, and test whether topic use differs between two groups.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html">source</a></span><span class="op">(</span><span class="st">"R/helpers.R"</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://www.structuraltopicmodel.com/">stm</a></span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>stm v1.3.10 successfully loaded. See ?stm for help. 
+ Papers, resources, and other materials at structuraltopicmodel.com</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">vcu</span> <span class="op">&lt;-</span> <span class="fu">load_vcu</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="what-stm-adds" class="level2" data-number="5.1"><h2 data-number="5.1" class="anchored" data-anchor-id="what-stm-adds">
+<span class="header-section-number">5.1</span> What STM adds</h2>
+<p>STM does everything LDA does, and then some. If you read <a href="04-topic-lda.html" class="quarto-xref"><span>Chapter 4</span></a>, the core ideas (topics are word lists, documents are mixes of topics, you choose K) all carry over.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead><tr class="header">
+<th></th>
+<th>LDA</th>
+<th>STM</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Finds topics from word co-occurrence</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>Topic prevalence can depend on covariates</td>
+<td>No</td>
+<td>Yes (<code>prevalence</code>)</td>
+</tr>
+<tr class="odd">
+<td>Topic <em>wording</em> can depend on covariates</td>
+<td>No</td>
+<td>Yes (<code>content</code>)</td>
+</tr>
+<tr class="even">
+<td>Built-in tools for choosing K and for effects</td>
+<td>Few</td>
+<td>Many (<code>searchK</code>, <code>estimateEffect</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>A <strong>covariate</strong> is just a characteristic of each document, such as the student’s level. We use the first extension, <strong>prevalence</strong>: “does this characteristic change <em>how much</em> a student talks about each topic?” The second, <strong>content</strong>, asks “does it change <em>which words</em> they use for the same topic?” It is powerful but needs more data per group than we have.</p>
+</section><section id="documents-and-covariates" class="level2" data-number="5.2"><h2 data-number="5.2" class="anchored" data-anchor-id="documents-and-covariates">
+<span class="header-section-number">5.2</span> Documents and covariates</h2>
+<p>As before, we combine each student’s answers into one document. This time we also keep a covariate: student level. A small number of students are professional or missing a level, and one-off groups that small cannot support an estimate, so we compare undergraduates with graduate students.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">docs</span> <span class="op">&lt;-</span> <span class="va">vcu</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/filter.html">filter</a></span><span class="op">(</span><span class="va">level</span> <span class="op"><a href="https://rdrr.io/r/base/match.html">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"Undergraduate"</span>, <span class="st">"Graduate"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">group_by</span><span class="op">(</span><span class="va">resp_id</span>, <span class="va">level</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">summarise</span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="va">text</span>, collapse <span class="op">=</span> <span class="st">" "</span><span class="op">)</span>, .groups <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span><span class="op">(</span><span class="va">level</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"Undergraduate"</span>, <span class="st">"Graduate"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">count</span><span class="op">(</span><span class="va">docs</span>, <span class="va">level</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 2
+  level             n
+  &lt;fct&gt;         &lt;int&gt;
+1 Undergraduate  1016
+2 Graduate        193</code></pre>
+</div>
+</div>
+<ul>
+<li>
+<code>filter(level %in% c("Undergraduate", "Graduate"))</code> keeps answers from students in those two groups (<code>%in%</code> means “is one of”).</li>
+<li>
+<code>group_by(resp_id, level)</code> followed by <code>summarise(text = paste(text, collapse = " "))</code> glues each student’s answers into one block of text. This is the same “one document per student” idea as in the LDA chapter. We group by <code>level</code> as well so that the level comes along with each student.</li>
+<li>
+<code>mutate(level = factor(...))</code> turns <code>level</code> into a <strong>factor</strong>, a column with a fixed list of categories in a stated order. The order matters: the first level, “Undergraduate,” becomes the <strong>reference group</strong> that the other is compared to, which will matter when we read the results.</li>
+<li>
+<code>count(docs, level)</code> shows how many students are in each group.</li>
+</ul></section><section id="preprocess-with-textprocessor" class="level2" data-number="5.3"><h2 data-number="5.3" class="anchored" data-anchor-id="preprocess-with-textprocessor">
+<span class="header-section-number">5.3</span> Preprocess with <code>textProcessor()</code>
+</h2>
+<p>STM has its own preprocessing helper. By default it lowercases, removes punctuation and numbers, drops stop words, and stems words (cuts them to a root). We turn stemming off so that the topic words stay readable, and pass the same domain stop words used earlier.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">custom_stops</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"vcu"</span>, <span class="st">"student"</span>, <span class="st">"students"</span>, <span class="st">"like"</span>, <span class="st">"get"</span>, <span class="st">"just"</span>,</span>
+<span>                  <span class="st">"really"</span>, <span class="st">"also"</span>, <span class="st">"can"</span>, <span class="st">"lot"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">processed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/stm/man/textProcessor.html">textProcessor</a></span><span class="op">(</span></span>
+<span>  documents       <span class="op">=</span> <span class="va">docs</span><span class="op">$</span><span class="va">text</span>,</span>
+<span>  metadata        <span class="op">=</span> <span class="va">docs</span>,</span>
+<span>  stem            <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  customstopwords <span class="op">=</span> <span class="va">custom_stops</span>,</span>
+<span>  verbose         <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Drop words that appear in fewer than 5 documents, and the documents that</span></span>
+<span><span class="co"># end up empty. prepDocuments keeps the metadata aligned.</span></span>
+<span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/stm/man/prepDocuments.html">prepDocuments</a></span><span class="op">(</span><span class="va">processed</span><span class="op">$</span><span class="va">documents</span>, <span class="va">processed</span><span class="op">$</span><span class="va">vocab</span>, <span class="va">processed</span><span class="op">$</span><span class="va">meta</span>,</span>
+<span>                     lower.thresh <span class="op">=</span> <span class="fl">5</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span><span class="op">(</span><span class="va">out</span><span class="op">$</span><span class="va">documents</span><span class="op">)</span>; <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span><span class="op">(</span><span class="va">out</span><span class="op">$</span><span class="va">vocab</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1209</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 424</code></pre>
+</div>
+</div>
+<ul>
+<li>
+<code><a href="https://rdrr.io/pkg/stm/man/textProcessor.html">textProcessor()</a></code> takes the text (<code>documents</code>) and the table of characteristics that goes with it (<code>metadata</code>). <code>stem = FALSE</code> turns off stemming. <code>customstopwords</code> adds our own stop words. <code>verbose = FALSE</code> silences progress messages.</li>
+<li>The result, <code>processed</code>, bundles three things: <code>documents</code> (the text converted to word counts), <code>vocab</code> (the list of words), and <code>meta</code> (the matching characteristics table). The dollar sign (<code>processed$vocab</code>) picks one of them out.</li>
+<li>
+<code><a href="https://rdrr.io/pkg/stm/man/prepDocuments.html">prepDocuments()</a></code> cleans up further. The option <code>lower.thresh = 5</code> removes words that appear in fewer than five documents (the same pruning we did for LDA), and removes any documents left empty.</li>
+<li>The last line reports how many documents and how many words remain.</li>
+</ul>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Metadata must stay aligned with documents
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>If <code>textProcessor</code> or <code>prepDocuments</code> drops a document, the metadata rows must go with it. Always use <code>out$meta</code>, never the original <code>docs</code>, in everything that follows. Mixing them up silently pairs the wrong covariate with the wrong document.</p>
+</div>
+</div>
+</section><section id="fit-the-model" class="level2" data-number="5.4"><h2 data-number="5.4" class="anchored" data-anchor-id="fit-the-model">
+<span class="header-section-number">5.4</span> Fit the model</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">K</span> <span class="op">&lt;-</span> <span class="fl">8</span></span>
+<span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/stm/man/stm.html">stm</a></span><span class="op">(</span></span>
+<span>  documents  <span class="op">=</span> <span class="va">out</span><span class="op">$</span><span class="va">documents</span>,</span>
+<span>  vocab      <span class="op">=</span> <span class="va">out</span><span class="op">$</span><span class="va">vocab</span>,</span>
+<span>  K          <span class="op">=</span> <span class="va">K</span>,</span>
+<span>  prevalence <span class="op">=</span> <span class="op">~</span> <span class="va">level</span>,</span>
+<span>  data       <span class="op">=</span> <span class="va">out</span><span class="op">$</span><span class="va">meta</span>,</span>
+<span>  init.type  <span class="op">=</span> <span class="st">"Spectral"</span>,</span>
+<span>  seed       <span class="op">=</span> <span class="fl">664</span>,</span>
+<span>  verbose    <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The options of <code><a href="https://rdrr.io/pkg/stm/man/stm.html">stm()</a></code> that matter:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead><tr class="header">
+<th>Option</th>
+<th>What it means</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>
+<code>documents</code>, <code>vocab</code>
+</td>
+<td>The prepared text and word list</td>
+</tr>
+<tr class="even">
+<td><code>K = 8</code></td>
+<td>The number of topics. We pick eight as a starting point, as with LDA</td>
+</tr>
+<tr class="odd">
+<td><code>prevalence = ~ level</code></td>
+<td>The key option. This is a <strong>formula</strong>: the <code>~</code> (tilde) reads “depends on.” So topic proportions are allowed to depend on <code>level</code>. You can add more covariates with <code>+</code>, for example <code>~ level + source</code>
+</td>
+</tr>
+<tr class="even">
+<td><code>data = out$meta</code></td>
+<td>The table that holds those covariates, one row per document</td>
+</tr>
+<tr class="odd">
+<td><code>init.type = "Spectral"</code></td>
+<td>How the model begins its search. “Spectral” is a deterministic, stable starting point, so you get the same topics each time without hunting for a good random seed</td>
+</tr>
+<tr class="even">
+<td><code>seed = 664</code></td>
+<td>A random seed, for the parts that still involve chance</td>
+</tr>
+<tr class="odd">
+<td><code>verbose = FALSE</code></td>
+<td>Do not print the progress of each iteration</td>
+</tr>
+</tbody>
+</table></section><section id="reading-the-topics" class="level2" data-number="5.5"><h2 data-number="5.5" class="anchored" data-anchor-id="reading-the-topics">
+<span class="header-section-number">5.5</span> Reading the topics</h2>
+<p><code><a href="https://rdrr.io/pkg/stm/man/labelTopics.html">labelTopics()</a></code> reports four word lists per topic. Two matter most:</p>
+<ul>
+<li>
+<strong>Prob</strong>: the most probable words (like LDA’s beta)</li>
+<li>
+<strong>FREX</strong>: words that are both <strong>fr</strong>equent <em>and</em> <strong>ex</strong>clusive to the topic. These are usually the best for naming, because they avoid words that are common everywhere.</li>
+</ul>
+<p>(The other two, <strong>Lift</strong> and <strong>Score</strong>, are other ways of favoring distinctive words.)</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/stm/man/labelTopics.html">labelTopics</a></span><span class="op">(</span><span class="va">fit</span>, n <span class="op">=</span> <span class="fl">7</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Topic 1 Top Words:
+     Highest Prob: better, options, system, good, wish, people, cost 
+     FREX: options, charge, commuter, nobody, lower, handle, looked 
+     Lift: email, ride, safe, expectations, syllabus, handle, looked 
+     Score: email, options, charge, handle, looked, seemed, nobody 
+Topic 2 Top Words:
+     Highest Prob: campus, general, experience, overall, hear, notice, near 
+     FREX: map, near, signs, walks, weather, live, rarely 
+     Lift: safety, map, signs, live, rarely, police, presence 
+     Score: safety, campus, live, rarely, map, signs, walks 
+Topic 3 Top Words:
+     Highest Prob: resources, available, people, experience, learn, place, single 
+     FREX: learn, place, single, resources, create, available, health 
+     Lift: mental, clinic, learn, place, health, single, create 
+     Score: mental, resources, available, create, learn, place, single 
+Topic 4 Top Words:
+     Highest Prob: opportunities, people, wait, feel, reduce, academic, center 
+     FREX: wait, reduce, academic, ahead, compared, got, improved 
+     Lift: therapy, wait, reduce, times, ahead, compared, academic 
+     Score: therapy, wait, reduce, ahead, compared, academic, needs 
+Topic 5 Top Words:
+     Highest Prob: help, getting, needed, support, faculty, give, communication 
+     FREX: needed, getting, feedback, help, faculty, assignments, planning 
+     Lift: chances, feedback, assignments, needed, contact, took, weeks 
+     Score: chances, help, feedback, needed, getting, assignments, faculty 
+Topic 6 Top Words:
+     Highest Prob: things, one, aid, run, best, staff, campus 
+     FREX: best, one, aid, welcoming, felt, inconsistent, next 
+     Lift: welcome, paperwork, front, best, knowledge, desk, one 
+     Score: welcome, one, aid, best, feeling, things, inconsistent 
+Topic 7 Top Words:
+     Highest Prob: first, made, work, part, year, easier, everyone 
+     FREX: made, work, big, difference, everyone, year, first 
+     Lift: loan, laptop, made, big, difference, dont, work 
+     Score: loan, made, big, difference, first, work, everyone 
+Topic 8 Top Words:
+     Highest Prob: says, concerned, mentioned, wants, thinks, positive, helped 
+     FREX: wants, thinks, says, trouble, concerned, change, mentioned 
+     Lift: asks, change, changes, expanding, improving, lacking, recommends 
+     Score: lacking, says, thinks, wants, appreciates, change, trouble </code></pre>
+</div>
+</div>
+<p><code>n = 7</code> asks for seven words in each list. Name each topic from FREX plus Prob, as you did for LDA.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>An example of reading these lists
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Here is how the topics look on the synthetic data (the starting point is deterministic, so you should see the same ones). Reading each topic’s FREX and Lift words:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead><tr class="header">
+<th>Topic</th>
+<th>Words that stand out</th>
+<th>A reasonable name</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>options, charge, commuter, nobody, lower</td>
+<td>Commuting options and cost</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>map, near, signs, walks, safety, police</td>
+<td>Campus safety and signage</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>learn, place, resources, mental, clinic, health</td>
+<td>Health resources</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>wait, reduce, therapy, academic, compared</td>
+<td>Wait times for support</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>feedback, assignments, faculty, planning</td>
+<td>Faculty feedback</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>aid, paperwork, front, welcome, knowledge, inconsistent</td>
+<td>Staff and aid paperwork</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>laptop, loan, made, big, difference</td>
+<td>Technology help that “made a difference”</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>says, wants, thinks, asks, recommends, mentioned</td>
+<td><strong>A writing style, not a subject</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Notice topic 8. Its words (“says,” “wants,” “thinks”) are not about anything at VCU. They come from the third-person note-taking style of the paper forms, where interviewers wrote down what students said instead of quoting them. A topic model finds <em>any</em> recurring pattern of words, and a style of writing is one. That is not a failure, but it is a reminder that a topic is a pattern in words, which may or may not be a theme. Whenever one topic’s words look like grammar or phrasing, ask whether it tracks <em>how the text was collected</em> rather than <em>what people said</em>.</p>
+<p>Names like these are your interpretation, and a colleague might name them differently. Write down your reasoning so that it can be questioned.</p>
+</div>
+</div>
+<p>Then check the names against real text with <code><a href="https://rdrr.io/pkg/stm/man/findThoughts.html">findThoughts()</a></code>, which returns the documents most dominated by a topic.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">thoughts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/stm/man/findThoughts.html">findThoughts</a></span><span class="op">(</span><span class="va">fit</span>, texts <span class="op">=</span> <span class="va">out</span><span class="op">$</span><span class="va">meta</span><span class="op">$</span><span class="va">text</span>, n <span class="op">=</span> <span class="fl">2</span>, topics <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">)</span></span>
+<span><span class="va">thoughts</span><span class="op">$</span><span class="va">docs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Helpful how things are run. my favorite part is the weekend activities, Helpful email system Add more bus passes, Put the email system online"                                                                      
+[2] "Course sequencing is one of the best things about VCU. The commuter options kept me on track Feels like nobody is in charge of the system. hire more people for the syllabus expectations. Better intramural sports"</code></pre>
+</div>
+</div>
+<p><code>texts</code> supplies the original text to display, <code>n = 2</code> asks for the two best examples per topic, and <code>topics = 1:3</code> limits it to topics 1 through 3. (<code>1:3</code> is R shorthand for “1, 2, 3.”) The result is a list with one entry per topic, so <code>thoughts$docs[[1]]</code> shows the examples for the first. The double square brackets pick one item from a list.</p>
+<p>Repeat for each topic. A topic whose top documents do not hang together is not ready to be reported.</p>
+</section><section id="how-big-is-each-topic" class="level2" data-number="5.6"><h2 data-number="5.6" class="anchored" data-anchor-id="how-big-is-each-topic">
+<span class="header-section-number">5.6</span> How big is each topic?</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"summary"</span>, n <span class="op">=</span> <span class="fl">3</span>, xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.4</span><span class="op">)</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-summary" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure"><div aria-describedby="fig-summary-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="05-topic-stm_files/figure-html/fig-summary-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-summary-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5.1: Expected topic proportions, with the top words of each topic.
+</figcaption></figure>
+</div>
+</div>
+</div>
+<p>This draws one row per topic, sorted from the largest to the smallest. Each row has a horizontal line running from zero to the topic’s expected share of all the text, and a label listing the topic’s top words. <code>n = 3</code> sets the number of words in each label (we use three so that the labels fit; with more, the longest ones run off the edge of the chart), and <code>xlim</code> sets the horizontal range. (This chart uses R’s basic plotting, not <code>ggplot2</code>, so it looks a little different from the others.)</p>
+<p><strong>What the chart shows in our run.</strong> The horizontal axis is the <strong>expected topic proportion</strong>: the average share of each student’s text that belongs to the topic. Read the end of each line against the axis.</p>
+<ul>
+<li>
+<strong>The topics are close to equal in size.</strong> Seven of the eight lines end between about 0.12 and 0.14 (12 to 14%). With eight topics, an exactly even split would be 12.5%, so the model has divided the text into topics of similar weight, and no single topic dominates.</li>
+<li>
+<strong>The one clear exception is the smallest topic.</strong> Topic 8 (“says, concerned, mentioned, wants, thinks”) ends near 0.08, about 8% of the text. That is the note-taking-style topic, which comes only from the paper forms, a minority of the students, so a smaller share is just what we should expect.</li>
+<li>
+<strong>The order is a mild ranking, not a verdict.</strong> Topic 4 is on top at roughly 0.14, followed by topics 1, 7, 2, 5, 6, and 3, all within a couple of percentage points of each other. Differences that small should not be over-interpreted.</li>
+</ul>
+<p>As with the LDA chart, <em>size is not importance</em>. A topic that is large because it collects generic words (“better, options, system, good” in topic 1) and a topic that is small because it is specific can both be useful. The point of this chart is orientation: it tells you how the text is divided before you look at the differences between groups.</p>
+</section><section id="the-payoff-topics-by-student-level" class="level2" data-number="5.7"><h2 data-number="5.7" class="anchored" data-anchor-id="the-payoff-topics-by-student-level">
+<span class="header-section-number">5.7</span> The payoff: topics by student level</h2>
+<p>Now we can ask whether graduate and undergraduate students differ. <code><a href="https://rdrr.io/pkg/stm/man/estimateEffect.html">estimateEffect()</a></code> fits a simple regression for each topic, and then correctly accounts for the fact that each document’s topic proportions are themselves <em>estimates</em> rather than known facts.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">effect</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/stm/man/estimateEffect.html">estimateEffect</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">K</span> <span class="op">~</span> <span class="va">level</span>, <span class="va">fit</span>, metadata <span class="op">=</span> <span class="va">out</span><span class="op">$</span><span class="va">meta</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html">summary</a></span><span class="op">(</span><span class="va">effect</span>, topics <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+estimateEffect(formula = 1:K ~ level, stmobj = fit, metadata = out$meta)
+
+
+Topic 1:
+
+Coefficients:
+               Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)   0.1350759  0.0053452  25.270   &lt;2e-16 ***
+levelGraduate 0.0009222  0.0148613   0.062    0.951    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+
+Topic 2:
+
+Coefficients:
+              Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)   0.123605   0.005455  22.661   &lt;2e-16 ***
+levelGraduate 0.040688   0.013260   3.068   0.0022 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+
+Topic 3:
+
+Coefficients:
+               Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)    0.118966   0.005525  21.532   &lt;2e-16 ***
+levelGraduate -0.003503   0.013396  -0.262    0.794    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>What is a regression, in one paragraph?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A <strong>regression</strong> estimates how much an outcome changes when something else changes. Here the outcome is “the share of a student’s text that belongs to topic <em>k</em>,” and the “something else” is whether the student is a graduate student. The answer is a <strong>coefficient</strong>: the difference in that share between the groups. A <strong>standard error</strong> says how uncertain that difference is. A rough rule is that a coefficient more than about two standard errors from zero is unlikely to be pure chance.</p>
+</div>
+</div>
+<ul>
+<li>
+<code>1:K ~ level</code> is the formula: “for topics 1 through K, relate the topic share to <code>level</code>.”</li>
+<li>
+<code>metadata = out$meta</code> supplies the covariates.</li>
+<li>
+<code>summary(effect, topics = 1:3)</code> prints the results for the first three topics.</li>
+</ul>
+<p>Each topic’s results have an <strong>intercept</strong> (the expected topic share for undergraduates, the reference group) and a <code>levelGraduate</code> coefficient (how much higher or lower graduate students are). A coefficient of 0.03 means graduate students devote 3 percentage points more of their answers to that topic. Look at the <strong>Estimate</strong>, the <strong>Std. Error</strong>, and the p-value column. The p-value is the chance of seeing a difference this big if there were really none; small values (conventionally under 0.05) suggest a real difference.</p>
+<p>Here is what the first three topics showed. Topics 1 and 3 have coefficients near zero (0.001 and -0.004) with large p-values (0.95 and 0.79): no evidence of a difference. Topic 2 stands out. Graduate students are estimated to use it about 4 percentage points more (0.041, p = 0.002), which looks like a clear finding. The plot below shows all eight topics, and a second topic turns out to stand out too.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>A false alarm, by construction
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In the synthetic data, student level was assigned at random, so there is <strong>no real difference</strong> between graduate and undergraduate students to find. A “significant” result for topic 2 (and, as the plot below shows, a borderline one for topic 8) is therefore a false alarm. This is exactly what the next warning predicts: when you test eight topics at once, something will occasionally look significant by chance. It is also the best argument for the habit this book keeps repeating. Before believing a topic-by-group difference, read the documents behind it, and ask whether the story makes sense and whether it would hold up in a different sample.</p>
+</div>
+</div>
+<p>Rather than read eight regression tables, plot the differences.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">effect</span>,</span>
+<span>     covariate  <span class="op">=</span> <span class="st">"level"</span>,</span>
+<span>     topics     <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="va">K</span>,</span>
+<span>     model      <span class="op">=</span> <span class="va">fit</span>,</span>
+<span>     method     <span class="op">=</span> <span class="st">"difference"</span>,</span>
+<span>     cov.value1 <span class="op">=</span> <span class="st">"Graduate"</span>,</span>
+<span>     cov.value2 <span class="op">=</span> <span class="st">"Undergraduate"</span>,</span>
+<span>     xlab       <span class="op">=</span> <span class="st">"More undergraduate  &lt;----&gt;  More graduate"</span>,</span>
+<span>     labeltype  <span class="op">=</span> <span class="st">"custom"</span>,</span>
+<span>     custom.labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="st">"Topic"</span>, <span class="fl">1</span><span class="op">:</span><span class="va">K</span><span class="op">)</span>,</span>
+<span>     verbose.labels <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-effect" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure"><div aria-describedby="fig-effect-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="05-topic-stm_files/figure-html/fig-effect-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-effect-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5.2: Difference in topic proportion, Graduate minus Undergraduate. Intervals that cross zero are not distinguishable from no difference.
+</figcaption></figure>
+</div>
+</div>
+</div>
+<p>The options explained:</p>
+<ul>
+<li>
+<code>covariate = "level"</code> says which characteristic we are comparing on.</li>
+<li>
+<code>method = "difference"</code> plots the difference between two groups. <code>cov.value1 = "Graduate"</code> and <code>cov.value2 = "Undergraduate"</code> say which two, and the difference is the first minus the second. So a dot to the right of zero means graduate students use the topic <em>more</em>.</li>
+<li>
+<code>model = fit</code> supplies the fitted model (needed for labels).</li>
+<li>
+<code>xlab</code> sets the label of the horizontal axis. <code>labeltype = "custom"</code> with <code>custom.labels</code> lets us label each row “Topic 1,” “Topic 2,” and so on, instead of listing words. (<code>paste("Topic", 1:K)</code> builds those labels.)</li>
+</ul>
+<p>Read this the way you read any effect estimate: look at the <strong>interval</strong>, the horizontal line through each dot, which shows the range of plausible differences. If the line crosses zero, the data are consistent with no difference at all. Most intervals will cross zero, because we have fewer than 200 graduate students. A topic whose interval clearly excludes zero is a candidate finding. Go back and read the graduate and undergraduate documents for that topic before saying anything about it.</p>
+<section id="reading-the-chart-from-our-run" class="level3" data-number="5.7.1"><h3 data-number="5.7.1" class="anchored" data-anchor-id="reading-the-chart-from-our-run">
+<span class="header-section-number">5.7.1</span> Reading the chart from our run</h3>
+<p>Each row is a topic. The dot is the estimated difference in the share of a student’s text (graduate minus undergraduate), and the line is its 95% interval. The dashed vertical line marks zero, “no difference.” A dot to the right of it means graduate students use the topic more; to the left, undergraduates do. The whole horizontal range is small, from about -0.06 to +0.06, which means differences of at most a few percentage points.</p>
+<ul>
+<li>
+<strong>Six of the eight lines cross zero.</strong> Topics 1, 3, 4, 5, 6, and 7 all have dots close to zero and lines that straddle it. For these there is no evidence of any difference. Topic 7’s dot is a little to the left (about -0.013) but its line is wide, so it is well within the noise.</li>
+<li>
+<strong>Topic 2 sits to the right of zero.</strong> The dot is at about +0.04, and the whole line (roughly +0.015 to +0.065) is right of the dashed line. Taken at face value, graduate students use topic 2 more.</li>
+<li>
+<strong>Topic 8 sits to the left of zero, barely.</strong> The dot is at about -0.03, and the line (roughly -0.065 to -0.002) only just stays on the left side of zero. Taken at face value, undergraduates use this topic more. Topic 8 is the note-taking-style topic from earlier, which is exactly the kind of result that tempts a story (“graduate students were interviewed differently”). A line that <em>just</em> clears zero deserves extra skepticism.</li>
+</ul>
+<p>Both of those results are false alarms. Student level was assigned at random in this synthetic data, so there is nothing to find. Two of eight is a bit more than the roughly 0.4 you would expect by chance at the 5% level, but it is not out of the question, and it is a vivid illustration of why the “eight topics, eight tests” warning below matters. This chart looks like a finding. Reading the documents behind topics 2 and 8, and noticing that a plausible story is easy to invent, is what protects you from reporting it.</p>
+<p>A note on the picture itself: the labels are drawn next to the dots, so a label may touch the dashed line (as “Topic 2” does). That is cosmetic and comes from the plotting function.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Eight topics, eight tests
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>We are looking at eight differences at once. If there were no true differences, about one interval in twenty would still miss zero by chance, and with eight topics you should expect it to happen sometimes. (A standard remedy is to demand stronger evidence when you run many tests, for example by dividing the 0.05 cutoff by the number of tests.) Treat the topic-by-level comparisons as a way to generate hypotheses, and confirm anything interesting by reading and by a different sample if you can.</p>
+</div>
+</div>
+</section></section><section id="choosing-k-with-searchk" class="level2" data-number="5.8"><h2 data-number="5.8" class="anchored" data-anchor-id="choosing-k-with-searchk">
+<span class="header-section-number">5.8</span> Choosing K with <code>searchK()</code>
+</h2>
+<p>STM includes tools for comparing values of K using several diagnostics.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Takes a few minutes; run it when you are ready to wait</span></span>
+<span><span class="va">k_search</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/stm/man/searchK.html">searchK</a></span><span class="op">(</span><span class="va">out</span><span class="op">$</span><span class="va">documents</span>, <span class="va">out</span><span class="op">$</span><span class="va">vocab</span>, K <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">6</span>, <span class="fl">8</span>, <span class="fl">10</span>, <span class="fl">12</span><span class="op">)</span>,</span>
+<span>                    prevalence <span class="op">=</span> <span class="op">~</span> <span class="va">level</span>, data <span class="op">=</span> <span class="va">out</span><span class="op">$</span><span class="va">meta</span>,</span>
+<span>                    init.type <span class="op">=</span> <span class="st">"Spectral"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">k_search</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>This block is set to display only (<code>eval: false</code>) because it takes a few minutes. <code><a href="https://rdrr.io/pkg/stm/man/searchK.html">searchK()</a></code> fits a model for each K you list and measures:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead><tr class="header">
+<th>Diagnostic</th>
+<th>In plain terms</th>
+<th>Look for</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><strong>Held-out likelihood</strong></td>
+<td>How well the model predicts words in documents it did not see during fitting</td>
+<td>A K where the curve stops climbing</td>
+</tr>
+<tr class="even">
+<td><strong>Residuals</strong></td>
+<td>How much the model’s predictions miss by</td>
+<td>Lower is better</td>
+</tr>
+<tr class="odd">
+<td><strong>Semantic coherence</strong></td>
+<td>Whether a topic’s top words tend to appear together in the same documents</td>
+<td>Higher is better, but it usually falls as K grows</td>
+</tr>
+<tr class="even">
+<td><strong>Exclusivity</strong></td>
+<td>Whether a topic’s words are unique to it</td>
+<td>Higher is better</td>
+</tr>
+</tbody>
+</table>
+<p><code>plot(k_search)</code> shows them side by side. As with LDA, the diagnostics narrow the range and you choose within it by reading the topics.</p>
+</section><section id="cautions" class="level2" data-number="5.9"><h2 data-number="5.9" class="anchored" data-anchor-id="cautions">
+<span class="header-section-number">5.9</span> Cautions</h2>
+<ul>
+<li>
+<strong>The covariate adjusts topic prevalence; it does not explain it.</strong> A difference by level could reflect program differences, the interviewer, or who was available at which event.</li>
+<li>
+<strong>Small groups give wide intervals.</strong> If a result matters, check it by reading the underlying documents.</li>
+<li>
+<strong>STM is still a bag-of-words model.</strong> It treats each document as a bag of words and does not read word order, negation, or sarcasm.</li>
+</ul></section><section id="summary" class="level2" data-number="5.10"><h2 data-number="5.10" class="anchored" data-anchor-id="summary">
+<span class="header-section-number">5.10</span> Summary</h2>
+<ul>
+<li>STM is LDA that knows about your covariates: you tell it the characteristics of each document, and it lets topic prevalence vary with them.</li>
+<li>Name topics from <strong>FREX</strong> words, then verify with <code><a href="https://rdrr.io/pkg/stm/man/findThoughts.html">findThoughts()</a></code>.</li>
+<li>
+<code><a href="https://rdrr.io/pkg/stm/man/estimateEffect.html">estimateEffect()</a></code> gives properly uncertain comparisons of topic prevalence between groups. Read the intervals, not just the dots.</li>
+<li>Use <code>out$meta</code>, not your original data frame, after preprocessing.</li>
+</ul>
+
+
+<!-- -->
+
+</section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const cellDetails = window.document.querySelectorAll(".cell details.code-fold");
+        for (let i=0; i<cellDetails.length; i++) {
+          const details = cellDetails[i];
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell div.sourceCode.cell-code");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script><nav class="page-navigation"><div class="nav-page nav-page-previous">
+      <a href="./04-topic-lda.html" class="pagination-link" aria-label="Topic Models I: LDA">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Topic Models I: LDA</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./06-sentiment.html" class="pagination-link" aria-label="Sentiment Analysis">
+        <span class="nav-page-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Sentiment Analysis</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># Topic Models II: Structural Topic Models {#sec-stm}</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>**Data for this chapter:** <span class="in">`data/vcu_cares_long.csv`</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>LDA gave us themes, but it treats every student the same. It cannot tell us whether graduate students raise different themes than undergraduates, except by a second step after the fact: take each document's topics and compare them across groups by hand.</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>The **structural topic model (STM)** (Roberts, Stewart, &amp; Tingley, 2019) builds that comparison into the model. You tell it about document-level characteristics, such as student level, and it lets the *prevalence* of each topic (how much of the text belongs to it) depend on them. The result is a topic model that can answer "which topics are more common among graduate students, and how sure are we?"</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>By the end of this chapter you will be able to prepare documents for STM, fit a model, read its word lists, and test whether topic use differs between two groups.</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: setup</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"R/helpers.R"</span>)</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stm)</span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>vcu <span class="ot">&lt;-</span> <span class="fu">load_vcu</span>()</span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a><span class="fu">## What STM adds</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>STM does everything LDA does, and then some. If you read @sec-lda, the core ideas (topics are word lists, documents are mixes of topics, you choose K) all carry over.</span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="pp">|</span> LDA <span class="pp">|</span> STM <span class="pp">|</span></span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Finds topics from word co-occurrence <span class="pp">|</span> Yes <span class="pp">|</span> Yes <span class="pp">|</span></span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Topic prevalence can depend on covariates <span class="pp">|</span> No <span class="pp">|</span> Yes (<span class="in">`prevalence`</span>) <span class="pp">|</span></span>
+<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Topic *wording* can depend on covariates <span class="pp">|</span> No <span class="pp">|</span> Yes (<span class="in">`content`</span>) <span class="pp">|</span></span>
+<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Built-in tools for choosing K and for effects <span class="pp">|</span> Few <span class="pp">|</span> Many (<span class="in">`searchK`</span>, <span class="in">`estimateEffect`</span>) <span class="pp">|</span></span>
+<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a>A **covariate** is just a characteristic of each document, such as the student's level. We use the first extension, **prevalence**: "does this characteristic change *how much* a student talks about each topic?" The second, **content**, asks "does it change *which words* they use for the same topic?" It is powerful but needs more data per group than we have.</span>
+<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a><span class="fu">## Documents and covariates</span></span>
+<span id="cb19-36"><a href="#cb19-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-37"><a href="#cb19-37" aria-hidden="true" tabindex="-1"></a>As before, we combine each student's answers into one document. This time we also keep a covariate: student level. A small number of students are professional or missing a level, and one-off groups that small cannot support an estimate, so we compare undergraduates with graduate students.</span>
+<span id="cb19-38"><a href="#cb19-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-41"><a href="#cb19-41" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb19-42"><a href="#cb19-42" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: docs</span></span>
+<span id="cb19-43"><a href="#cb19-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-44"><a href="#cb19-44" aria-hidden="true" tabindex="-1"></a>docs <span class="ot">&lt;-</span> vcu <span class="sc">|&gt;</span></span>
+<span id="cb19-45"><a href="#cb19-45" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(level <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Undergraduate"</span>, <span class="st">"Graduate"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb19-46"><a href="#cb19-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(resp_id, level) <span class="sc">|&gt;</span></span>
+<span id="cb19-47"><a href="#cb19-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">text =</span> <span class="fu">paste</span>(text, <span class="at">collapse =</span> <span class="st">" "</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb19-48"><a href="#cb19-48" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">level =</span> <span class="fu">factor</span>(level, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Undergraduate"</span>, <span class="st">"Graduate"</span>)))</span>
+<span id="cb19-49"><a href="#cb19-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-50"><a href="#cb19-50" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(docs, level)</span>
+<span id="cb19-51"><a href="#cb19-51" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-52"><a href="#cb19-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-53"><a href="#cb19-53" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`filter(level %in% c("Undergraduate", "Graduate"))`</span> keeps answers from students in those two groups (<span class="in">`%in%`</span> means "is one of").</span>
+<span id="cb19-54"><a href="#cb19-54" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`group_by(resp_id, level)`</span> followed by <span class="in">`summarise(text = paste(text, collapse = " "))`</span> glues each student's answers into one block of text. This is the same "one document per student" idea as in the LDA chapter. We group by <span class="in">`level`</span> as well so that the level comes along with each student.</span>
+<span id="cb19-55"><a href="#cb19-55" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`mutate(level = factor(...))`</span> turns <span class="in">`level`</span> into a **factor**, a column with a fixed list of categories in a stated order. The order matters: the first level, "Undergraduate," becomes the **reference group** that the other is compared to, which will matter when we read the results.</span>
+<span id="cb19-56"><a href="#cb19-56" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`count(docs, level)`</span> shows how many students are in each group.</span>
+<span id="cb19-57"><a href="#cb19-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-58"><a href="#cb19-58" aria-hidden="true" tabindex="-1"></a><span class="fu">## Preprocess with `textProcessor()`</span></span>
+<span id="cb19-59"><a href="#cb19-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-60"><a href="#cb19-60" aria-hidden="true" tabindex="-1"></a>STM has its own preprocessing helper. By default it lowercases, removes punctuation and numbers, drops stop words, and stems words (cuts them to a root). We turn stemming off so that the topic words stay readable, and pass the same domain stop words used earlier.</span>
+<span id="cb19-61"><a href="#cb19-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-64"><a href="#cb19-64" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb19-65"><a href="#cb19-65" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: process</span></span>
+<span id="cb19-66"><a href="#cb19-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-67"><a href="#cb19-67" aria-hidden="true" tabindex="-1"></a>custom_stops <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"vcu"</span>, <span class="st">"student"</span>, <span class="st">"students"</span>, <span class="st">"like"</span>, <span class="st">"get"</span>, <span class="st">"just"</span>,</span>
+<span id="cb19-68"><a href="#cb19-68" aria-hidden="true" tabindex="-1"></a>                  <span class="st">"really"</span>, <span class="st">"also"</span>, <span class="st">"can"</span>, <span class="st">"lot"</span>)</span>
+<span id="cb19-69"><a href="#cb19-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-70"><a href="#cb19-70" aria-hidden="true" tabindex="-1"></a>processed <span class="ot">&lt;-</span> <span class="fu">textProcessor</span>(</span>
+<span id="cb19-71"><a href="#cb19-71" aria-hidden="true" tabindex="-1"></a>  <span class="at">documents       =</span> docs<span class="sc">$</span>text,</span>
+<span id="cb19-72"><a href="#cb19-72" aria-hidden="true" tabindex="-1"></a>  <span class="at">metadata        =</span> docs,</span>
+<span id="cb19-73"><a href="#cb19-73" aria-hidden="true" tabindex="-1"></a>  <span class="at">stem            =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb19-74"><a href="#cb19-74" aria-hidden="true" tabindex="-1"></a>  <span class="at">customstopwords =</span> custom_stops,</span>
+<span id="cb19-75"><a href="#cb19-75" aria-hidden="true" tabindex="-1"></a>  <span class="at">verbose         =</span> <span class="cn">FALSE</span></span>
+<span id="cb19-76"><a href="#cb19-76" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-77"><a href="#cb19-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-78"><a href="#cb19-78" aria-hidden="true" tabindex="-1"></a><span class="co"># Drop words that appear in fewer than 5 documents, and the documents that</span></span>
+<span id="cb19-79"><a href="#cb19-79" aria-hidden="true" tabindex="-1"></a><span class="co"># end up empty. prepDocuments keeps the metadata aligned.</span></span>
+<span id="cb19-80"><a href="#cb19-80" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">prepDocuments</span>(processed<span class="sc">$</span>documents, processed<span class="sc">$</span>vocab, processed<span class="sc">$</span>meta,</span>
+<span id="cb19-81"><a href="#cb19-81" aria-hidden="true" tabindex="-1"></a>                     <span class="at">lower.thresh =</span> <span class="dv">5</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb19-82"><a href="#cb19-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-83"><a href="#cb19-83" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(out<span class="sc">$</span>documents); <span class="fu">length</span>(out<span class="sc">$</span>vocab)</span>
+<span id="cb19-84"><a href="#cb19-84" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-85"><a href="#cb19-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-86"><a href="#cb19-86" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`textProcessor()`</span> takes the text (<span class="in">`documents`</span>) and the table of characteristics that goes with it (<span class="in">`metadata`</span>). <span class="in">`stem = FALSE`</span> turns off stemming. <span class="in">`customstopwords`</span> adds our own stop words. <span class="in">`verbose = FALSE`</span> silences progress messages.</span>
+<span id="cb19-87"><a href="#cb19-87" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The result, <span class="in">`processed`</span>, bundles three things: <span class="in">`documents`</span> (the text converted to word counts), <span class="in">`vocab`</span> (the list of words), and <span class="in">`meta`</span> (the matching characteristics table). The dollar sign (<span class="in">`processed$vocab`</span>) picks one of them out.</span>
+<span id="cb19-88"><a href="#cb19-88" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`prepDocuments()`</span> cleans up further. The option <span class="in">`lower.thresh = 5`</span> removes words that appear in fewer than five documents (the same pruning we did for LDA), and removes any documents left empty.</span>
+<span id="cb19-89"><a href="#cb19-89" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>The last line reports how many documents and how many words remain.</span>
+<span id="cb19-90"><a href="#cb19-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-91"><a href="#cb19-91" aria-hidden="true" tabindex="-1"></a>::: callout-warning</span>
+<span id="cb19-92"><a href="#cb19-92" aria-hidden="true" tabindex="-1"></a><span class="fu">## Metadata must stay aligned with documents</span></span>
+<span id="cb19-93"><a href="#cb19-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-94"><a href="#cb19-94" aria-hidden="true" tabindex="-1"></a>If <span class="in">`textProcessor`</span> or <span class="in">`prepDocuments`</span> drops a document, the metadata rows must go with it. Always use <span class="in">`out$meta`</span>, never the original <span class="in">`docs`</span>, in everything that follows. Mixing them up silently pairs the wrong covariate with the wrong document.</span>
+<span id="cb19-95"><a href="#cb19-95" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb19-96"><a href="#cb19-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-97"><a href="#cb19-97" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fit the model</span></span>
+<span id="cb19-98"><a href="#cb19-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-101"><a href="#cb19-101" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb19-102"><a href="#cb19-102" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fit</span></span>
+<span id="cb19-103"><a href="#cb19-103" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-104"><a href="#cb19-104" aria-hidden="true" tabindex="-1"></a>K <span class="ot">&lt;-</span> <span class="dv">8</span></span>
+<span id="cb19-105"><a href="#cb19-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-106"><a href="#cb19-106" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">stm</span>(</span>
+<span id="cb19-107"><a href="#cb19-107" aria-hidden="true" tabindex="-1"></a>  <span class="at">documents  =</span> out<span class="sc">$</span>documents,</span>
+<span id="cb19-108"><a href="#cb19-108" aria-hidden="true" tabindex="-1"></a>  <span class="at">vocab      =</span> out<span class="sc">$</span>vocab,</span>
+<span id="cb19-109"><a href="#cb19-109" aria-hidden="true" tabindex="-1"></a>  <span class="at">K          =</span> K,</span>
+<span id="cb19-110"><a href="#cb19-110" aria-hidden="true" tabindex="-1"></a>  <span class="at">prevalence =</span> <span class="sc">~</span> level,</span>
+<span id="cb19-111"><a href="#cb19-111" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> out<span class="sc">$</span>meta,</span>
+<span id="cb19-112"><a href="#cb19-112" aria-hidden="true" tabindex="-1"></a>  <span class="at">init.type  =</span> <span class="st">"Spectral"</span>,</span>
+<span id="cb19-113"><a href="#cb19-113" aria-hidden="true" tabindex="-1"></a>  <span class="at">seed       =</span> <span class="dv">664</span>,</span>
+<span id="cb19-114"><a href="#cb19-114" aria-hidden="true" tabindex="-1"></a>  <span class="at">verbose    =</span> <span class="cn">FALSE</span></span>
+<span id="cb19-115"><a href="#cb19-115" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-116"><a href="#cb19-116" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-117"><a href="#cb19-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-118"><a href="#cb19-118" aria-hidden="true" tabindex="-1"></a>The options of <span class="in">`stm()`</span> that matter:</span>
+<span id="cb19-119"><a href="#cb19-119" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-120"><a href="#cb19-120" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Option <span class="pp">|</span> What it means <span class="pp">|</span></span>
+<span id="cb19-121"><a href="#cb19-121" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb19-122"><a href="#cb19-122" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`documents`</span>, <span class="in">`vocab`</span> <span class="pp">|</span> The prepared text and word list <span class="pp">|</span></span>
+<span id="cb19-123"><a href="#cb19-123" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`K = 8`</span> <span class="pp">|</span> The number of topics. We pick eight as a starting point, as with LDA <span class="pp">|</span></span>
+<span id="cb19-124"><a href="#cb19-124" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`prevalence = ~ level`</span> <span class="pp">|</span> The key option. This is a **formula**: the <span class="in">`~`</span> (tilde) reads "depends on." So topic proportions are allowed to depend on <span class="in">`level`</span>. You can add more covariates with <span class="in">`+`</span>, for example <span class="in">`~ level + source`</span> <span class="pp">|</span></span>
+<span id="cb19-125"><a href="#cb19-125" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`data = out$meta`</span> <span class="pp">|</span> The table that holds those covariates, one row per document <span class="pp">|</span></span>
+<span id="cb19-126"><a href="#cb19-126" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`init.type = "Spectral"`</span> <span class="pp">|</span> How the model begins its search. "Spectral" is a deterministic, stable starting point, so you get the same topics each time without hunting for a good random seed <span class="pp">|</span></span>
+<span id="cb19-127"><a href="#cb19-127" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`seed = 664`</span> <span class="pp">|</span> A random seed, for the parts that still involve chance <span class="pp">|</span></span>
+<span id="cb19-128"><a href="#cb19-128" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`verbose = FALSE`</span> <span class="pp">|</span> Do not print the progress of each iteration <span class="pp">|</span></span>
+<span id="cb19-129"><a href="#cb19-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-130"><a href="#cb19-130" aria-hidden="true" tabindex="-1"></a><span class="fu">## Reading the topics</span></span>
+<span id="cb19-131"><a href="#cb19-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-132"><a href="#cb19-132" aria-hidden="true" tabindex="-1"></a><span class="in">`labelTopics()`</span> reports four word lists per topic. Two matter most:</span>
+<span id="cb19-133"><a href="#cb19-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-134"><a href="#cb19-134" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Prob**: the most probable words (like LDA's beta)</span>
+<span id="cb19-135"><a href="#cb19-135" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**FREX**: words that are both **fr**equent *and* **ex**clusive to the topic. These are usually the best for naming, because they avoid words that are common everywhere.</span>
+<span id="cb19-136"><a href="#cb19-136" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-137"><a href="#cb19-137" aria-hidden="true" tabindex="-1"></a>(The other two, **Lift** and **Score**, are other ways of favoring distinctive words.)</span>
+<span id="cb19-138"><a href="#cb19-138" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-141"><a href="#cb19-141" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb19-142"><a href="#cb19-142" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: labels</span></span>
+<span id="cb19-143"><a href="#cb19-143" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-144"><a href="#cb19-144" aria-hidden="true" tabindex="-1"></a><span class="fu">labelTopics</span>(fit, <span class="at">n =</span> <span class="dv">7</span>)</span>
+<span id="cb19-145"><a href="#cb19-145" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-146"><a href="#cb19-146" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-147"><a href="#cb19-147" aria-hidden="true" tabindex="-1"></a><span class="in">`n = 7`</span> asks for seven words in each list. Name each topic from FREX plus Prob, as you did for LDA.</span>
+<span id="cb19-148"><a href="#cb19-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-149"><a href="#cb19-149" aria-hidden="true" tabindex="-1"></a>::: callout-note</span>
+<span id="cb19-150"><a href="#cb19-150" aria-hidden="true" tabindex="-1"></a><span class="fu">## An example of reading these lists</span></span>
+<span id="cb19-151"><a href="#cb19-151" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-152"><a href="#cb19-152" aria-hidden="true" tabindex="-1"></a>Here is how the topics look on the synthetic data (the starting point is deterministic, so you should see the same ones). Reading each topic's FREX and Lift words:</span>
+<span id="cb19-153"><a href="#cb19-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-154"><a href="#cb19-154" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Topic <span class="pp">|</span> Words that stand out <span class="pp">|</span> A reasonable name <span class="pp">|</span></span>
+<span id="cb19-155"><a href="#cb19-155" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb19-156"><a href="#cb19-156" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> 1 <span class="pp">|</span> options, charge, commuter, nobody, lower <span class="pp">|</span> Commuting options and cost <span class="pp">|</span></span>
+<span id="cb19-157"><a href="#cb19-157" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> 2 <span class="pp">|</span> map, near, signs, walks, safety, police <span class="pp">|</span> Campus safety and signage <span class="pp">|</span></span>
+<span id="cb19-158"><a href="#cb19-158" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> 3 <span class="pp">|</span> learn, place, resources, mental, clinic, health <span class="pp">|</span> Health resources <span class="pp">|</span></span>
+<span id="cb19-159"><a href="#cb19-159" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> 4 <span class="pp">|</span> wait, reduce, therapy, academic, compared <span class="pp">|</span> Wait times for support <span class="pp">|</span></span>
+<span id="cb19-160"><a href="#cb19-160" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> 5 <span class="pp">|</span> feedback, assignments, faculty, planning <span class="pp">|</span> Faculty feedback <span class="pp">|</span></span>
+<span id="cb19-161"><a href="#cb19-161" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> 6 <span class="pp">|</span> aid, paperwork, front, welcome, knowledge, inconsistent <span class="pp">|</span> Staff and aid paperwork <span class="pp">|</span></span>
+<span id="cb19-162"><a href="#cb19-162" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> 7 <span class="pp">|</span> laptop, loan, made, big, difference <span class="pp">|</span> Technology help that "made a difference" <span class="pp">|</span></span>
+<span id="cb19-163"><a href="#cb19-163" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> 8 <span class="pp">|</span> says, wants, thinks, asks, recommends, mentioned <span class="pp">|</span> **A writing style, not a subject** <span class="pp">|</span></span>
+<span id="cb19-164"><a href="#cb19-164" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-165"><a href="#cb19-165" aria-hidden="true" tabindex="-1"></a>Notice topic 8. Its words ("says," "wants," "thinks") are not about anything at VCU. They come from the third-person note-taking style of the paper forms, where interviewers wrote down what students said instead of quoting them. A topic model finds *any* recurring pattern of words, and a style of writing is one. That is not a failure, but it is a reminder that a topic is a pattern in words, which may or may not be a theme. Whenever one topic's words look like grammar or phrasing, ask whether it tracks *how the text was collected* rather than *what people said*.</span>
+<span id="cb19-166"><a href="#cb19-166" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-167"><a href="#cb19-167" aria-hidden="true" tabindex="-1"></a>Names like these are your interpretation, and a colleague might name them differently. Write down your reasoning so that it can be questioned.</span>
+<span id="cb19-168"><a href="#cb19-168" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb19-169"><a href="#cb19-169" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-170"><a href="#cb19-170" aria-hidden="true" tabindex="-1"></a>Then check the names against real text with <span class="in">`findThoughts()`</span>, which returns the documents most dominated by a topic.</span>
+<span id="cb19-171"><a href="#cb19-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-174"><a href="#cb19-174" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb19-175"><a href="#cb19-175" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: thoughts</span></span>
+<span id="cb19-176"><a href="#cb19-176" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-177"><a href="#cb19-177" aria-hidden="true" tabindex="-1"></a>thoughts <span class="ot">&lt;-</span> <span class="fu">findThoughts</span>(fit, <span class="at">texts =</span> out<span class="sc">$</span>meta<span class="sc">$</span>text, <span class="at">n =</span> <span class="dv">2</span>, <span class="at">topics =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>)</span>
+<span id="cb19-178"><a href="#cb19-178" aria-hidden="true" tabindex="-1"></a>thoughts<span class="sc">$</span>docs[[<span class="dv">1</span>]]</span>
+<span id="cb19-179"><a href="#cb19-179" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-180"><a href="#cb19-180" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-181"><a href="#cb19-181" aria-hidden="true" tabindex="-1"></a><span class="in">`texts`</span> supplies the original text to display, <span class="in">`n = 2`</span> asks for the two best examples per topic, and <span class="in">`topics = 1:3`</span> limits it to topics 1 through 3. (<span class="in">`1:3`</span> is R shorthand for "1, 2, 3.") The result is a list with one entry per topic, so <span class="in">`thoughts$docs[[1]]`</span> shows the examples for the first. The double square brackets pick one item from a list.</span>
+<span id="cb19-182"><a href="#cb19-182" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-183"><a href="#cb19-183" aria-hidden="true" tabindex="-1"></a>Repeat for each topic. A topic whose top documents do not hang together is not ready to be reported.</span>
+<span id="cb19-184"><a href="#cb19-184" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-185"><a href="#cb19-185" aria-hidden="true" tabindex="-1"></a><span class="fu">## How big is each topic?</span></span>
+<span id="cb19-186"><a href="#cb19-186" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-189"><a href="#cb19-189" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb19-190"><a href="#cb19-190" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-summary</span></span>
+<span id="cb19-191"><a href="#cb19-191" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "Expected topic proportions, with the top words of each topic."</span></span>
+<span id="cb19-192"><a href="#cb19-192" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 6</span></span>
+<span id="cb19-193"><a href="#cb19-193" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-194"><a href="#cb19-194" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit, <span class="at">type =</span> <span class="st">"summary"</span>, <span class="at">n =</span> <span class="dv">3</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.4</span>))</span>
+<span id="cb19-195"><a href="#cb19-195" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-196"><a href="#cb19-196" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-197"><a href="#cb19-197" aria-hidden="true" tabindex="-1"></a>This draws one row per topic, sorted from the largest to the smallest. Each row has a horizontal line running from zero to the topic's expected share of all the text, and a label listing the topic's top words. <span class="in">`n = 3`</span> sets the number of words in each label (we use three so that the labels fit; with more, the longest ones run off the edge of the chart), and <span class="in">`xlim`</span> sets the horizontal range. (This chart uses R's basic plotting, not <span class="in">`ggplot2`</span>, so it looks a little different from the others.)</span>
+<span id="cb19-198"><a href="#cb19-198" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-199"><a href="#cb19-199" aria-hidden="true" tabindex="-1"></a>**What the chart shows in our run.** The horizontal axis is the **expected topic proportion**: the average share of each student's text that belongs to the topic. Read the end of each line against the axis.</span>
+<span id="cb19-200"><a href="#cb19-200" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-201"><a href="#cb19-201" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**The topics are close to equal in size.** Seven of the eight lines end between about 0.12 and 0.14 (12 to 14%). With eight topics, an exactly even split would be 12.5%, so the model has divided the text into topics of similar weight, and no single topic dominates.</span>
+<span id="cb19-202"><a href="#cb19-202" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**The one clear exception is the smallest topic.** Topic 8 ("says, concerned, mentioned, wants, thinks") ends near 0.08, about 8% of the text. That is the note-taking-style topic, which comes only from the paper forms, a minority of the students, so a smaller share is just what we should expect.</span>
+<span id="cb19-203"><a href="#cb19-203" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**The order is a mild ranking, not a verdict.** Topic 4 is on top at roughly 0.14, followed by topics 1, 7, 2, 5, 6, and 3, all within a couple of percentage points of each other. Differences that small should not be over-interpreted.</span>
+<span id="cb19-204"><a href="#cb19-204" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-205"><a href="#cb19-205" aria-hidden="true" tabindex="-1"></a>As with the LDA chart, *size is not importance*. A topic that is large because it collects generic words ("better, options, system, good" in topic 1) and a topic that is small because it is specific can both be useful. The point of this chart is orientation: it tells you how the text is divided before you look at the differences between groups.</span>
+<span id="cb19-206"><a href="#cb19-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-207"><a href="#cb19-207" aria-hidden="true" tabindex="-1"></a><span class="fu">## The payoff: topics by student level</span></span>
+<span id="cb19-208"><a href="#cb19-208" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-209"><a href="#cb19-209" aria-hidden="true" tabindex="-1"></a>Now we can ask whether graduate and undergraduate students differ. <span class="in">`estimateEffect()`</span> fits a simple regression for each topic, and then correctly accounts for the fact that each document's topic proportions are themselves *estimates* rather than known facts.</span>
+<span id="cb19-210"><a href="#cb19-210" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-213"><a href="#cb19-213" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb19-214"><a href="#cb19-214" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: effect</span></span>
+<span id="cb19-215"><a href="#cb19-215" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-216"><a href="#cb19-216" aria-hidden="true" tabindex="-1"></a>effect <span class="ot">&lt;-</span> <span class="fu">estimateEffect</span>(<span class="dv">1</span><span class="sc">:</span>K <span class="sc">~</span> level, fit, <span class="at">metadata =</span> out<span class="sc">$</span>meta)</span>
+<span id="cb19-217"><a href="#cb19-217" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(effect, <span class="at">topics =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>)</span>
+<span id="cb19-218"><a href="#cb19-218" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-219"><a href="#cb19-219" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-220"><a href="#cb19-220" aria-hidden="true" tabindex="-1"></a>::: callout-note</span>
+<span id="cb19-221"><a href="#cb19-221" aria-hidden="true" tabindex="-1"></a><span class="fu">## What is a regression, in one paragraph?</span></span>
+<span id="cb19-222"><a href="#cb19-222" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-223"><a href="#cb19-223" aria-hidden="true" tabindex="-1"></a>A **regression** estimates how much an outcome changes when something else changes. Here the outcome is "the share of a student's text that belongs to topic *k*," and the "something else" is whether the student is a graduate student. The answer is a **coefficient**: the difference in that share between the groups. A **standard error** says how uncertain that difference is. A rough rule is that a coefficient more than about two standard errors from zero is unlikely to be pure chance.</span>
+<span id="cb19-224"><a href="#cb19-224" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb19-225"><a href="#cb19-225" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-226"><a href="#cb19-226" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`1:K ~ level`</span> is the formula: "for topics 1 through K, relate the topic share to <span class="in">`level`</span>."</span>
+<span id="cb19-227"><a href="#cb19-227" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`metadata = out$meta`</span> supplies the covariates.</span>
+<span id="cb19-228"><a href="#cb19-228" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`summary(effect, topics = 1:3)`</span> prints the results for the first three topics.</span>
+<span id="cb19-229"><a href="#cb19-229" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-230"><a href="#cb19-230" aria-hidden="true" tabindex="-1"></a>Each topic's results have an **intercept** (the expected topic share for undergraduates, the reference group) and a `levelGraduate` coefficient (how much higher or lower graduate students are). A coefficient of 0.03 means graduate students devote 3 percentage points more of their answers to that topic. Look at the **Estimate**, the **Std. Error**, and the p-value column. The p-value is the chance of seeing a difference this big if there were really none; small values (conventionally under 0.05) suggest a real difference.</span>
+<span id="cb19-231"><a href="#cb19-231" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-232"><a href="#cb19-232" aria-hidden="true" tabindex="-1"></a>Here is what the first three topics showed. Topics 1 and 3 have coefficients near zero (0.001 and -0.004) with large p-values (0.95 and 0.79): no evidence of a difference. Topic 2 stands out. Graduate students are estimated to use it about 4 percentage points more (0.041, p = 0.002), which looks like a clear finding. The plot below shows all eight topics, and a second topic turns out to stand out too.</span>
+<span id="cb19-233"><a href="#cb19-233" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-234"><a href="#cb19-234" aria-hidden="true" tabindex="-1"></a>::: callout-warning</span>
+<span id="cb19-235"><a href="#cb19-235" aria-hidden="true" tabindex="-1"></a><span class="fu">## A false alarm, by construction</span></span>
+<span id="cb19-236"><a href="#cb19-236" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-237"><a href="#cb19-237" aria-hidden="true" tabindex="-1"></a>In the synthetic data, student level was assigned at random, so there is **no real difference** between graduate and undergraduate students to find. A "significant" result for topic 2 (and, as the plot below shows, a borderline one for topic 8) is therefore a false alarm. This is exactly what the next warning predicts: when you test eight topics at once, something will occasionally look significant by chance. It is also the best argument for the habit this book keeps repeating. Before believing a topic-by-group difference, read the documents behind it, and ask whether the story makes sense and whether it would hold up in a different sample.</span>
+<span id="cb19-238"><a href="#cb19-238" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb19-239"><a href="#cb19-239" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-240"><a href="#cb19-240" aria-hidden="true" tabindex="-1"></a>Rather than read eight regression tables, plot the differences.</span>
+<span id="cb19-241"><a href="#cb19-241" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-244"><a href="#cb19-244" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb19-245"><a href="#cb19-245" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-effect</span></span>
+<span id="cb19-246"><a href="#cb19-246" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "Difference in topic proportion, Graduate minus Undergraduate. Intervals that cross zero are not distinguishable from no difference."</span></span>
+<span id="cb19-247"><a href="#cb19-247" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 6</span></span>
+<span id="cb19-248"><a href="#cb19-248" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-249"><a href="#cb19-249" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(effect,</span>
+<span id="cb19-250"><a href="#cb19-250" aria-hidden="true" tabindex="-1"></a>     <span class="at">covariate  =</span> <span class="st">"level"</span>,</span>
+<span id="cb19-251"><a href="#cb19-251" aria-hidden="true" tabindex="-1"></a>     <span class="at">topics     =</span> <span class="dv">1</span><span class="sc">:</span>K,</span>
+<span id="cb19-252"><a href="#cb19-252" aria-hidden="true" tabindex="-1"></a>     <span class="at">model      =</span> fit,</span>
+<span id="cb19-253"><a href="#cb19-253" aria-hidden="true" tabindex="-1"></a>     <span class="at">method     =</span> <span class="st">"difference"</span>,</span>
+<span id="cb19-254"><a href="#cb19-254" aria-hidden="true" tabindex="-1"></a>     <span class="at">cov.value1 =</span> <span class="st">"Graduate"</span>,</span>
+<span id="cb19-255"><a href="#cb19-255" aria-hidden="true" tabindex="-1"></a>     <span class="at">cov.value2 =</span> <span class="st">"Undergraduate"</span>,</span>
+<span id="cb19-256"><a href="#cb19-256" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab       =</span> <span class="st">"More undergraduate  &lt;----&gt;  More graduate"</span>,</span>
+<span id="cb19-257"><a href="#cb19-257" aria-hidden="true" tabindex="-1"></a>     <span class="at">labeltype  =</span> <span class="st">"custom"</span>,</span>
+<span id="cb19-258"><a href="#cb19-258" aria-hidden="true" tabindex="-1"></a>     <span class="at">custom.labels =</span> <span class="fu">paste</span>(<span class="st">"Topic"</span>, <span class="dv">1</span><span class="sc">:</span>K),</span>
+<span id="cb19-259"><a href="#cb19-259" aria-hidden="true" tabindex="-1"></a>     <span class="at">verbose.labels =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb19-260"><a href="#cb19-260" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-261"><a href="#cb19-261" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-262"><a href="#cb19-262" aria-hidden="true" tabindex="-1"></a>The options explained:</span>
+<span id="cb19-263"><a href="#cb19-263" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-264"><a href="#cb19-264" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`covariate = "level"`</span> says which characteristic we are comparing on.</span>
+<span id="cb19-265"><a href="#cb19-265" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`method = "difference"`</span> plots the difference between two groups. <span class="in">`cov.value1 = "Graduate"`</span> and <span class="in">`cov.value2 = "Undergraduate"`</span> say which two, and the difference is the first minus the second. So a dot to the right of zero means graduate students use the topic *more*.</span>
+<span id="cb19-266"><a href="#cb19-266" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`model = fit`</span> supplies the fitted model (needed for labels).</span>
+<span id="cb19-267"><a href="#cb19-267" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`xlab`</span> sets the label of the horizontal axis. <span class="in">`labeltype = "custom"`</span> with <span class="in">`custom.labels`</span> lets us label each row "Topic 1," "Topic 2," and so on, instead of listing words. (<span class="in">`paste("Topic", 1:K)`</span> builds those labels.)</span>
+<span id="cb19-268"><a href="#cb19-268" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-269"><a href="#cb19-269" aria-hidden="true" tabindex="-1"></a>Read this the way you read any effect estimate: look at the **interval**, the horizontal line through each dot, which shows the range of plausible differences. If the line crosses zero, the data are consistent with no difference at all. Most intervals will cross zero, because we have fewer than 200 graduate students. A topic whose interval clearly excludes zero is a candidate finding. Go back and read the graduate and undergraduate documents for that topic before saying anything about it.</span>
+<span id="cb19-270"><a href="#cb19-270" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-271"><a href="#cb19-271" aria-hidden="true" tabindex="-1"></a><span class="fu">### Reading the chart from our run</span></span>
+<span id="cb19-272"><a href="#cb19-272" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-273"><a href="#cb19-273" aria-hidden="true" tabindex="-1"></a>Each row is a topic. The dot is the estimated difference in the share of a student's text (graduate minus undergraduate), and the line is its 95% interval. The dashed vertical line marks zero, "no difference." A dot to the right of it means graduate students use the topic more; to the left, undergraduates do. The whole horizontal range is small, from about -0.06 to +0.06, which means differences of at most a few percentage points.</span>
+<span id="cb19-274"><a href="#cb19-274" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-275"><a href="#cb19-275" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Six of the eight lines cross zero.** Topics 1, 3, 4, 5, 6, and 7 all have dots close to zero and lines that straddle it. For these there is no evidence of any difference. Topic 7's dot is a little to the left (about -0.013) but its line is wide, so it is well within the noise.</span>
+<span id="cb19-276"><a href="#cb19-276" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Topic 2 sits to the right of zero.** The dot is at about +0.04, and the whole line (roughly +0.015 to +0.065) is right of the dashed line. Taken at face value, graduate students use topic 2 more.</span>
+<span id="cb19-277"><a href="#cb19-277" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Topic 8 sits to the left of zero, barely.** The dot is at about -0.03, and the line (roughly -0.065 to -0.002) only just stays on the left side of zero. Taken at face value, undergraduates use this topic more. Topic 8 is the note-taking-style topic from earlier, which is exactly the kind of result that tempts a story ("graduate students were interviewed differently"). A line that *just* clears zero deserves extra skepticism.</span>
+<span id="cb19-278"><a href="#cb19-278" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-279"><a href="#cb19-279" aria-hidden="true" tabindex="-1"></a>Both of those results are false alarms. Student level was assigned at random in this synthetic data, so there is nothing to find. Two of eight is a bit more than the roughly 0.4 you would expect by chance at the 5% level, but it is not out of the question, and it is a vivid illustration of why the "eight topics, eight tests" warning below matters. This chart looks like a finding. Reading the documents behind topics 2 and 8, and noticing that a plausible story is easy to invent, is what protects you from reporting it.</span>
+<span id="cb19-280"><a href="#cb19-280" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-281"><a href="#cb19-281" aria-hidden="true" tabindex="-1"></a>A note on the picture itself: the labels are drawn next to the dots, so a label may touch the dashed line (as "Topic 2" does). That is cosmetic and comes from the plotting function.</span>
+<span id="cb19-282"><a href="#cb19-282" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-283"><a href="#cb19-283" aria-hidden="true" tabindex="-1"></a>::: callout-important</span>
+<span id="cb19-284"><a href="#cb19-284" aria-hidden="true" tabindex="-1"></a><span class="fu">## Eight topics, eight tests</span></span>
+<span id="cb19-285"><a href="#cb19-285" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-286"><a href="#cb19-286" aria-hidden="true" tabindex="-1"></a>We are looking at eight differences at once. If there were no true differences, about one interval in twenty would still miss zero by chance, and with eight topics you should expect it to happen sometimes. (A standard remedy is to demand stronger evidence when you run many tests, for example by dividing the 0.05 cutoff by the number of tests.) Treat the topic-by-level comparisons as a way to generate hypotheses, and confirm anything interesting by reading and by a different sample if you can.</span>
+<span id="cb19-287"><a href="#cb19-287" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb19-288"><a href="#cb19-288" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-289"><a href="#cb19-289" aria-hidden="true" tabindex="-1"></a><span class="fu">## Choosing K with `searchK()`</span></span>
+<span id="cb19-290"><a href="#cb19-290" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-291"><a href="#cb19-291" aria-hidden="true" tabindex="-1"></a>STM includes tools for comparing values of K using several diagnostics.</span>
+<span id="cb19-292"><a href="#cb19-292" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-295"><a href="#cb19-295" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb19-296"><a href="#cb19-296" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: searchk</span></span>
+<span id="cb19-297"><a href="#cb19-297" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb19-298"><a href="#cb19-298" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-299"><a href="#cb19-299" aria-hidden="true" tabindex="-1"></a><span class="co"># Takes a few minutes; run it when you are ready to wait</span></span>
+<span id="cb19-300"><a href="#cb19-300" aria-hidden="true" tabindex="-1"></a>k_search <span class="ot">&lt;-</span> <span class="fu">searchK</span>(out<span class="sc">$</span>documents, out<span class="sc">$</span>vocab, <span class="at">K =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">6</span>, <span class="dv">8</span>, <span class="dv">10</span>, <span class="dv">12</span>),</span>
+<span id="cb19-301"><a href="#cb19-301" aria-hidden="true" tabindex="-1"></a>                    <span class="at">prevalence =</span> <span class="sc">~</span> level, <span class="at">data =</span> out<span class="sc">$</span>meta,</span>
+<span id="cb19-302"><a href="#cb19-302" aria-hidden="true" tabindex="-1"></a>                    <span class="at">init.type =</span> <span class="st">"Spectral"</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb19-303"><a href="#cb19-303" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-304"><a href="#cb19-304" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(k_search)</span>
+<span id="cb19-305"><a href="#cb19-305" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-306"><a href="#cb19-306" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-307"><a href="#cb19-307" aria-hidden="true" tabindex="-1"></a>This block is set to display only (<span class="in">`eval: false`</span>) because it takes a few minutes. <span class="in">`searchK()`</span> fits a model for each K you list and measures:</span>
+<span id="cb19-308"><a href="#cb19-308" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-309"><a href="#cb19-309" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Diagnostic <span class="pp">|</span> In plain terms <span class="pp">|</span> Look for <span class="pp">|</span></span>
+<span id="cb19-310"><a href="#cb19-310" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb19-311"><a href="#cb19-311" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Held-out likelihood** <span class="pp">|</span> How well the model predicts words in documents it did not see during fitting <span class="pp">|</span> A K where the curve stops climbing <span class="pp">|</span></span>
+<span id="cb19-312"><a href="#cb19-312" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Residuals** <span class="pp">|</span> How much the model's predictions miss by <span class="pp">|</span> Lower is better <span class="pp">|</span></span>
+<span id="cb19-313"><a href="#cb19-313" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Semantic coherence** <span class="pp">|</span> Whether a topic's top words tend to appear together in the same documents <span class="pp">|</span> Higher is better, but it usually falls as K grows <span class="pp">|</span></span>
+<span id="cb19-314"><a href="#cb19-314" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Exclusivity** <span class="pp">|</span> Whether a topic's words are unique to it <span class="pp">|</span> Higher is better <span class="pp">|</span></span>
+<span id="cb19-315"><a href="#cb19-315" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-316"><a href="#cb19-316" aria-hidden="true" tabindex="-1"></a><span class="in">`plot(k_search)`</span> shows them side by side. As with LDA, the diagnostics narrow the range and you choose within it by reading the topics.</span>
+<span id="cb19-317"><a href="#cb19-317" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-318"><a href="#cb19-318" aria-hidden="true" tabindex="-1"></a><span class="fu">## Cautions</span></span>
+<span id="cb19-319"><a href="#cb19-319" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-320"><a href="#cb19-320" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**The covariate adjusts topic prevalence; it does not explain it.** A difference by level could reflect program differences, the interviewer, or who was available at which event.</span>
+<span id="cb19-321"><a href="#cb19-321" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Small groups give wide intervals.** If a result matters, check it by reading the underlying documents.</span>
+<span id="cb19-322"><a href="#cb19-322" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**STM is still a bag-of-words model.** It treats each document as a bag of words and does not read word order, negation, or sarcasm.</span>
+<span id="cb19-323"><a href="#cb19-323" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-324"><a href="#cb19-324" aria-hidden="true" tabindex="-1"></a><span class="fu">## Summary</span></span>
+<span id="cb19-325"><a href="#cb19-325" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-326"><a href="#cb19-326" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>STM is LDA that knows about your covariates: you tell it the characteristics of each document, and it lets topic prevalence vary with them.</span>
+<span id="cb19-327"><a href="#cb19-327" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Name topics from **FREX** words, then verify with <span class="in">`findThoughts()`</span>.</span>
+<span id="cb19-328"><a href="#cb19-328" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`estimateEffect()`</span> gives properly uncertain comparisons of topic prevalence between groups. Read the intervals, not just the dots.</span>
+<span id="cb19-329"><a href="#cb19-329" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Use <span class="in">`out$meta`</span>, not your original data frame, after preprocessing.</span>
+</code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+<footer class="footer"><div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Text Mining in R</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/mikediam123/text-mining/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+<p>Built with <a href="https://quarto.org">Quarto</a></p>
+</div>
+  </div>
+</footer>
+
+
+</body></html>
