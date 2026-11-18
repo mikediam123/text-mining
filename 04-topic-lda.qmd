@@ -140,7 +140,7 @@ The lesson is general: **a topic model that runs is not a topic model that works
 ::: callout-note
 ## Other options of `LDA()`
 
-- `method`: how the model is fitted. The default, `"VEM"`, is fast. The alternative, `"Gibbs"`, is slower but is often preferred for careful results. Both estimate the same model, and both need a sensible alpha: with Gibbs, the default alpha is `50 / K`, which for K = 6 is about 8.3, and we found it too large here as well. Add `alpha = 0.1` there too.
+- `method`: how the model is fitted. The default, `"VEM"` (Variational Expectation-Maximization; Blei et al., 2003), is fast. The alternative, `"Gibbs"`, is slower but is often preferred for careful results. Both estimate the same model, and both need a sensible alpha: with Gibbs, the default alpha is `50 / K`, which for K = 6 is about 8.3, and we found it too large here as well. Add `alpha = 0.1` there too.
 - `alpha`: as above. Smaller values (0.01 to 0.5) give documents that lean toward fewer topics; larger values give blended documents. It is a judgment call, and worth trying a few values.
 - `iter` and `burnin` (for `"Gibbs"`): how many rounds of computation to run, and how many early rounds to throw away. More rounds give more stable results and take longer.
 :::
