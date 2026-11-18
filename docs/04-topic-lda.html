@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.10.19">
+<meta name="generator" content="quarto-1.9.38">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <meta name="description" content="A hands-on introduction to text mining for lab members, built around open-ended interviews with VCU students. Moves from descriptive methods (word counts, TF-IDF) to topic models, sentiment analysis, and supervised learning.">
 <title>4&nbsp; Topic Models I: LDA – Text Mining in R</title>
@@ -10,13 +10,10 @@
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
 */
+code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: 1.5em;}
-div.column{flex: auto;}
-@media screen {
-div.columns{gap: min(4vw, 1.5em);}
-div.column{overflow-x: auto;}
-}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
 div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
@@ -76,10 +73,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-a09481bce8a2314b82ccc09e3e79ae8c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
+<link href="site_libs/bootstrap/bootstrap-0f3a71d5963b834a2d5774f6f36c66af.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
   "collapse-after": 3,
@@ -491,7 +488,7 @@ Weighting          : term frequency (tf)</code></pre>
 <div class="callout-body-container callout-body">
 <ul>
 <li>
-<code>method</code>: how the model is fitted. The default, <code>"VEM"</code>, is fast. The alternative, <code>"Gibbs"</code>, is slower but is often preferred for careful results. Both estimate the same model, and both need a sensible alpha: with Gibbs, the default alpha is <code>50 / K</code>, which for K = 6 is about 8.3, and we found it too large here as well. Add <code>alpha = 0.1</code> there too.</li>
+<code>method</code>: how the model is fitted. The default, <code>"VEM"</code> (Variational Expectation-Maximization; Blei et al., 2003), is fast. The alternative, <code>"Gibbs"</code>, is slower but is often preferred for careful results. Both estimate the same model, and both need a sensible alpha: with Gibbs, the default alpha is <code>50 / K</code>, which for K = 6 is about 8.3, and we found it too large here as well. Add <code>alpha = 0.1</code> there too.</li>
 <li>
 <code>alpha</code>: as above. Smaller values (0.01 to 0.5) give documents that lean toward fewer topics; larger values give blended documents. It is a judgment call, and worth trying a few values.</li>
 <li>
@@ -945,16 +942,16 @@ Figure&nbsp;4.4: For each LDA topic, the interviewer codes most over-represented
     }
     function toggleCodeHandler(show) {
       return function(e) {
-        const cellDetails = window.document.querySelectorAll(".cell details.code-fold");
-        for (let i=0; i<cellDetails.length; i++) {
-          const details = cellDetails[i];
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
           if (show) {
             details.open = true;
           } else {
             details.removeAttribute("open");
           }
         }
-        const cellCodeDivs = window.document.querySelectorAll(".cell div.sourceCode.cell-code");
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
         const fromCls = show ? "hidden" : "unhidden";
         const toCls = show ? "unhidden" : "hidden";
         for (let i=0; i<cellCodeDivs.length; i++) {
@@ -1456,7 +1453,7 @@ Figure&nbsp;4.4: For each LDA topic, the interviewer codes most over-represented
 <span id="cb24-148"><a href="#cb24-148" aria-hidden="true" tabindex="-1"></a>::: callout-note</span>
 <span id="cb24-149"><a href="#cb24-149" aria-hidden="true" tabindex="-1"></a><span class="fu">## Other options of `LDA()`</span></span>
 <span id="cb24-150"><a href="#cb24-150" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-151"><a href="#cb24-151" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`method`</span>: how the model is fitted. The default, <span class="in">`"VEM"`</span>, is fast. The alternative, <span class="in">`"Gibbs"`</span>, is slower but is often preferred for careful results. Both estimate the same model, and both need a sensible alpha: with Gibbs, the default alpha is <span class="in">`50 / K`</span>, which for K = 6 is about 8.3, and we found it too large here as well. Add <span class="in">`alpha = 0.1`</span> there too.</span>
+<span id="cb24-151"><a href="#cb24-151" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`method`</span>: how the model is fitted. The default, <span class="in">`"VEM"`</span> (Variational Expectation-Maximization; Blei et al., 2003), is fast. The alternative, <span class="in">`"Gibbs"`</span>, is slower but is often preferred for careful results. Both estimate the same model, and both need a sensible alpha: with Gibbs, the default alpha is <span class="in">`50 / K`</span>, which for K = 6 is about 8.3, and we found it too large here as well. Add <span class="in">`alpha = 0.1`</span> there too.</span>
 <span id="cb24-152"><a href="#cb24-152" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`alpha`</span>: as above. Smaller values (0.01 to 0.5) give documents that lean toward fewer topics; larger values give blended documents. It is a judgment call, and worth trying a few values.</span>
 <span id="cb24-153"><a href="#cb24-153" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`iter`</span> and <span class="in">`burnin`</span> (for <span class="in">`"Gibbs"`</span>): how many rounds of computation to run, and how many early rounds to throw away. More rounds give more stable results and take longer.</span>
 <span id="cb24-154"><a href="#cb24-154" aria-hidden="true" tabindex="-1"></a>:::</span>
